@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     makeStyles, 
     Dialog, 
@@ -28,7 +28,15 @@ const useStyles = makeStyles(() => ({
     DialogItem: {
         marginBottom: '1.5rem'
     }
-}))
+}));
+
+const initialGrade = {
+    grade: null,
+    gradeType: null,
+    comments: null,
+    lastAttendance: null,
+    extensionDate: null
+}
 
 // const dropdownItems = ["A+","A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F", "I", "W", "P", "F"]
 
@@ -42,20 +50,14 @@ const GradeDialog = ({
 }) => {
     const classes = useStyles();
 
-    const [gradeType, setGradeType] = useState();
-    const [grade, setGrade] = useState();
-    const [comments, setComments] = useState();
-    const [lastAttendance, setLastAttendance] = useState();
-    const [extensionDate, setExtensionDate] = useState();
-
-    // const { gradeDefinitions } = useGradeDefinitions({schemeId});
+    const [grade, setGrade] = useState(initialGrade);
 
     const gradeDefinitions = useFetchData({ schemeId });
-    const grades = gradeDefinitions?.sort((a,b) => {
-        // console.log(a.grade.value > b.grade.value)    
-        return a.grade.value > b.grade.value
-    })
-    console.log(grades)
+    // const grades = gradeDefinitions?.sort((a,b) => a.grade.value > b.grade.value)
+
+    const clearInputs = () => {
+        setGrade(initialGrade)
+    };
 
     const handleClose = () => {
         setSelectedStudent(undefined)
@@ -63,21 +65,28 @@ const GradeDialog = ({
         clearInputs()
     };
 
-    const clearInputs = () => {
-        setGradeType(undefined)
-        setGrade(undefined)
-        setComments(undefined)
-        setLastAttendance(undefined)
-        setExtensionDate(undefined)
-    };
+    useEffect(() => {
+        console.log(grade)
+    }, [grade]);
+
+    const handleChange = (e) => {
+        setGrade(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }))
+    }
+
+    const handleDateChange = (date, key) => {
+        setGrade(prev => ({
+            ...prev,
+            [key]: date.toISOString().slice(0,10)
+        }))
+    }
 
     const handleSubmit = (e) => {
         e.preventDefault()
-        console.log("Grade Type:", gradeType)
         console.log("Grade:", grade)
-        console.log("Comments:", comments)
-        console.log("Last Attendance:", lastAttendance)
-        console.log("Extension Date:", extensionDate)
+        if (grade.lastAttendance > grade.extensionDate) console.log('Extension date must be after date of last attendance!')
     };
 
     return (
@@ -94,46 +103,41 @@ const GradeDialog = ({
             <form name="grade-submission-form" onSubmit={handleSubmit}>
                 <FormControl component="fieldset">
                     <DialogContent>
-                        {/* <div style={{
-                            display: 'flex',
-                            // justifyContent: 'space-between'
-                        }}> */}
-                            <Dropdown
-                                className={classes.DialogItem}
-                                label="Grade Type" 
-                                value={gradeType} 
-                                onChange={(e) => setGradeType(e.target.value)}
-                                // fullWidth
-                                required
-                            >
-                                <DropdownItem label="Midterm" value="3de8f785-d20a-4409-ade1-151414b8e423" />
-                                <DropdownItem label="Final" value="dbcdc999-58db-4f43-b38c-a29eb1bd5507" />
-                            </Dropdown>
-                            <Dropdown 
-                                className={classes.DialogItem}
-                                label="Grade" 
-                                value={grade}
-                                onChange={(e) => setGrade(e.target.value)}
-                                // fullWidth
-                                required 
-                            >
-                                {gradeDefinitions?.map(item => 
-                                    <DropdownItem 
-                                        key={item.id} 
-                                        label={item.grade.value} 
-                                        value={item.id} 
-                                    />
-                                )}
-                            </Dropdown>
-                        {/* </div> */}
-                        {grade === 'aeb7fba5-072e-483f-90ad-62aa58c5c61a' &&
+                        <Dropdown
+                            className={classes.DialogItem}
+                            name="gradeType"
+                            label="Grade Type" 
+                            value={grade?.gradeType} 
+                            onChange={handleChange}
+                            required
+                        >
+                            <DropdownItem label="Midterm" value="3de8f785-d20a-4409-ade1-151414b8e423" />
+                            <DropdownItem label="Final" value="dbcdc999-58db-4f43-b38c-a29eb1bd5507" />
+                        </Dropdown>
+                        <Dropdown 
+                            className={classes.DialogItem}
+                            name="grade"
+                            label="Grade" 
+                            value={grade?.grade}
+                            onChange={handleChange}
+                            required 
+                        >
+                            {gradeDefinitions?.map(item => 
+                                <DropdownItem 
+                                    key={item.id} 
+                                    label={item.grade.value} 
+                                    value={item.id} 
+                                />
+                            )}
+                        </Dropdown>
+                        {grade.grade === 'aeb7fba5-072e-483f-90ad-62aa58c5c61a' &&
                             <div className={classes.DialogItem}>
                                 <DatePicker
                                     // className={classes.DialogItem}
                                     label="Last Attended"
                                     placeholder="Select a date"
-                                    value={lastAttendance}
-                                    onDateChange={(date) => setLastAttendance(date.toISOString().slice(0,10))}
+                                    value={grade?.lastAttendance}
+                                    onDateChange={(date) => handleDateChange(date, 'lastAttendance')}
                                     required
                                 />
                                 <div className={classes.DialogItem} style={{marginTop: "1.5rem"}}>
@@ -141,8 +145,8 @@ const GradeDialog = ({
                                         // className={classes.DialogItem}
                                         label="Extension Date"
                                         placeholder="Select a date"
-                                        value={extensionDate}
-                                        onDateChange={(date) => setExtensionDate(date.toISOString().slice(0,10))}
+                                        value={grade?.extensionDate}
+                                        onDateChange={(date) => handleDateChange(date, 'extensionDate')}
                                         required
                                     />
                                 </div>
@@ -152,8 +156,8 @@ const GradeDialog = ({
                             className={classes.DialogItem}
                             name="comments" 
                             label="Comments"
-                            value={comments}
-                            onChange={(e) => setComments(e.target.value)}
+                            value={grade?.comments}
+                            onChange={handleChange}
                             fullWidth
                             multiline
                             required
