@@ -1,0 +1,33 @@
+{
+  "name": "get-registered-students",
+  "parameters": [
+    {
+      "name": "ethosAPIKey",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    },
+    {
+      "name": "sectionId",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "apiDefinition": {
+    "authType": "userToken",
+    "httpVerb": "GET"
+  },
+  "pipeline": [
+    "Ethos GraphQL"
+  ],
+  "segments": {
+    "Ethos GraphQL": {
+      "class": "ethosGraphql",
+      "config": {
+        "query": "{ sectionRegistrations: sectionRegistrations16( sort: { registrant12: { names: { fullName: ASC } } } filter: { section16: { id: { EQ: \"{{context.sectionId}}\" } } } ) { edges { node { id section: section16 { academicPeriod: academicPeriod16 { code startOn } course: course16 { titles { value } subject: subject6 { title } number } } gradingOption { gradeScheme6 { id } } student: registrant12 { id names { fullName } credentials { type value } } } } } }",
+        "ignoreErrors": false,
+        "apiKey": "ethosAPIKey"
+      }
+    }
+  }
+}

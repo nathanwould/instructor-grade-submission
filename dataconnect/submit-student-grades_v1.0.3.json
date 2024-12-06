@@ -1,0 +1,41 @@
+{
+  "name": "submit-student-grades",
+  "parameters": [
+    {
+      "name": "ethosAPIKey",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    }
+  ],
+  "apiDefinition": {
+    "authType": "userToken",
+    "httpVerb": "POST"
+  },
+  "pipeline": [
+    "setup",
+    "Ethos Proxy Post"
+  ],
+  "segments": {
+    "setup": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const { payload: { sectionRegistrationId = '', grade = {} } } = message;\n  const { '_user': user } = context;\n  \n  const postBody = {\n    id: '00000000-0000-0000-0000-000000000000',\n    sectionRegistration: sectionRegistrationId,\n    grade: {\n      type: grade.gradeType,\n      grade: grade.grade\n    }\n  };\n  \n  return {\n    payload: {\n      postBody\n    }\n  }\n};\n"
+      }
+    },
+    "Ethos Proxy Post": {
+      "class": "ethosProxyPost",
+      "config": {
+        "resource": "student-unverified-grades-submissions",
+        "contentVersion": "1",
+        "acceptVersion": "1",
+        "bodyPath": "$.postBody",
+        "ignoreErrors": false,
+        "apiKey": "ethosAPIKey"
+      }
+    }
+  }
+}

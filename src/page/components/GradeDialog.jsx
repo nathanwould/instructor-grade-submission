@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     makeStyles, 
     Dialog, 
@@ -14,9 +14,11 @@ import {
     DatePicker,
     Button
 } from '@ellucian/react-design-system/core';
+import { useCardInfo, useData } from '@ellucian/experience-extension-utils';
 // import { useGradeDefinitions } from '../../utils/hooks/useGradeDefinitions';
 import PropTypes from 'prop-types';
 import { useFetchData } from '../../utils/hooks/useFetchData';
+import { submitStudentGrade } from '../../utils/hooks/submitStudentGrade';
 
 const useStyles = makeStyles(() => ({
     Dialog: {
@@ -49,6 +51,12 @@ const GradeDialog = ({
     schemeId
 }) => {
     const classes = useStyles();
+
+    // const { setErrorMessage } = useExtensionControl();
+    const { serverConfigContext: { cardPrefix }, cardId } = useCardInfo();
+    const { authenticatedEthosFetch } = useData();
+
+    console.log(selectedStudent?.sectionRegistration)
 
     const [grade, setGrade] = useState(initialGrade);
 
@@ -85,9 +93,16 @@ const GradeDialog = ({
 
     const handleSubmit = (e) => {
         e.preventDefault()
-        console.log("Grade:", grade)
-        if (grade.lastAttendance > grade.extensionDate) console.log('Extension date must be after date of last attendance!')
+        submitGrade({ selectedStudent, grade });
     };
+
+    const submitGrade = useCallback(async ({ selectedStudent, grade }) => {
+        const sectionRegistrationId = selectedStudent?.sectionRegistration;
+        const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade })
+        if (res.status === 'success') {
+            console.log('Success!')
+        }
+    }, [authenticatedEthosFetch, cardId, cardPrefix])
 
     return (
         <Dialog 
