@@ -29,7 +29,7 @@
     "Ethos Proxy Post": {
       "class": "ethosProxyPost",
       "config": {
-        "resource": "student-unverified-grades-submissions",
+        "resource": "student-unverified-grades",
         "contentVersion": "1",
         "acceptVersion": "1",
         "bodyPath": "$.postBody",
