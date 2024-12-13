@@ -20,7 +20,6 @@ import { usePageControl } from '@ellucian/experience-extension-utils';
 import { useStudents } from '../utils/hooks/useStudents';
 import GradeDialog from './components/GradeDialog';
 import PropTypes from 'prop-types';
-// import { useGradeDefinitions } from '../utils/hooks/useGradeDefinitions';
 
 const useStyles = makeStyles(() => ({
     card: {

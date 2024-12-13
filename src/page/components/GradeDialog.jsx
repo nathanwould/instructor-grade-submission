@@ -16,11 +16,9 @@ import {
     Skeleton
 } from '@ellucian/react-design-system/core';
 import { useCardInfo, useData } from '@ellucian/experience-extension-utils';
-// import { useGradeDefinitions } from '../../utils/hooks/useGradeDefinitions';
 import PropTypes from 'prop-types';
 import { useFetchData } from '../../utils/hooks/useFetchData';
 import { submitStudentGrade } from '../../utils/hooks/submitStudentGrade';
-// import { useGradeDefinitions } from '../../utils/hooks/useGradeDefinitions';
 
 const useStyles = makeStyles(() => ({
     Dialog: {
@@ -42,8 +40,6 @@ const initialGrade = {
     extensionDate: null
 }
 
-// const dropdownItems = ["A+","A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F", "I", "W", "P", "F"]
-
 const GradeDialog = ({
     open, 
     setOpen, 
@@ -63,28 +59,6 @@ const GradeDialog = ({
     const [grade, setGrade] = useState(initialGrade);
 
     const { gradeDefinitions, loading } = useFetchData({ schemeId });
-    // const { gradeDefinitions } = useGradeDefinitions({ schemeId })
-    // const grades = gradeDefinitions?.sort((a,b) => {
-    //     console.log('a:', a.grade.value, 'b:', b.grade.value, a.grade.value > b.grade.value)
-    //     if (a.grade.value[0] < b.grade.value[0]) {
-    //         return -1;
-    //     } else if (a.grade.value[0] > b.grade.value[0]) {
-    //         return 1;
-    //     } else {
-    //         // console.log("we're in the conditional!")
-    //         // console.log('a:', a.grade.value[1], 'b:', b.grade.value[1], a.grade.value > b.grade.value)
-    //         if (a.grade.value[1] && a.grade.value[1] === "+") {
-    //             // console.log(a.grade.value, b.grade.value)
-    //             return -1
-    //         } else if (a.grade.value[1] && a.grade.value[1] === "-") {
-    //             console.log(a.grade.value, b.grade.value)
-    //             return 1
-    //         } else return 0
-    //     }
-    // })
-
-    // console.log(grades)
-    // // console.log('A' > 'B')
 
     const clearInputs = () => {
         setGrade(initialGrade)
