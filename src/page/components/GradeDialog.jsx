@@ -12,13 +12,15 @@ import {
     DropdownItem,
     TextField,
     DatePicker,
-    Button
+    Button,
+    Skeleton
 } from '@ellucian/react-design-system/core';
 import { useCardInfo, useData } from '@ellucian/experience-extension-utils';
 // import { useGradeDefinitions } from '../../utils/hooks/useGradeDefinitions';
 import PropTypes from 'prop-types';
 import { useFetchData } from '../../utils/hooks/useFetchData';
 import { submitStudentGrade } from '../../utils/hooks/submitStudentGrade';
+// import { useGradeDefinitions } from '../../utils/hooks/useGradeDefinitions';
 
 const useStyles = makeStyles(() => ({
     Dialog: {
@@ -56,12 +58,33 @@ const GradeDialog = ({
     const { serverConfigContext: { cardPrefix }, cardId } = useCardInfo();
     const { authenticatedEthosFetch } = useData();
 
-    console.log(selectedStudent?.sectionRegistration)
+    // console.log(selectedStudent?.sectionRegistration)
 
     const [grade, setGrade] = useState(initialGrade);
 
-    const gradeDefinitions = useFetchData({ schemeId });
-    // const grades = gradeDefinitions?.sort((a,b) => a.grade.value > b.grade.value)
+    const { gradeDefinitions, loading } = useFetchData({ schemeId });
+    // const { gradeDefinitions } = useGradeDefinitions({ schemeId })
+    // const grades = gradeDefinitions?.sort((a,b) => {
+    //     console.log('a:', a.grade.value, 'b:', b.grade.value, a.grade.value > b.grade.value)
+    //     if (a.grade.value[0] < b.grade.value[0]) {
+    //         return -1;
+    //     } else if (a.grade.value[0] > b.grade.value[0]) {
+    //         return 1;
+    //     } else {
+    //         // console.log("we're in the conditional!")
+    //         // console.log('a:', a.grade.value[1], 'b:', b.grade.value[1], a.grade.value > b.grade.value)
+    //         if (a.grade.value[1] && a.grade.value[1] === "+") {
+    //             // console.log(a.grade.value, b.grade.value)
+    //             return -1
+    //         } else if (a.grade.value[1] && a.grade.value[1] === "-") {
+    //             console.log(a.grade.value, b.grade.value)
+    //             return 1
+    //         } else return 0
+    //     }
+    // })
+
+    // console.log(grades)
+    // // console.log('A' > 'B')
 
     const clearInputs = () => {
         setGrade(initialGrade)
@@ -125,7 +148,7 @@ const GradeDialog = ({
                             value={grade?.gradeType} 
                             onChange={handleChange}
                             required
-                        >
+                        >   
                             <DropdownItem label="Midterm" value="3de8f785-d20a-4409-ade1-151414b8e423" />
                             <DropdownItem label="Final" value="dbcdc999-58db-4f43-b38c-a29eb1bd5507" />
                         </Dropdown>
@@ -137,12 +160,17 @@ const GradeDialog = ({
                             onChange={handleChange}
                             required 
                         >
-                            {gradeDefinitions?.map(item => 
-                                <DropdownItem 
-                                    key={item.id} 
-                                    label={item.grade.value} 
-                                    value={item.id} 
-                                />
+                            { loading ?
+                                <>
+                                    <DropdownItem label={<Skeleton paragraph={{ width: '10sku' }} />} />
+                                </>
+                            
+                                : gradeDefinitions?.map(item => 
+                                    <DropdownItem 
+                                        key={item.id} 
+                                        label={item.grade.value} 
+                                        value={item.id} 
+                                    />
                             )}
                         </Dropdown>
                         {grade.grade === 'aeb7fba5-072e-483f-90ad-62aa58c5c61a' &&

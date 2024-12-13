@@ -19,5 +19,5 @@ export function useGradeDefinitions({ schemeId }) {
             gradeDefinitions = edges
         }
         return { gradeDefinitions }
-    }, [data])
+    }, [data, refresh])
 }

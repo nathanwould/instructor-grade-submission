@@ -13,12 +13,12 @@ export function useStudents() {
             // console.log(edges)
             course = edges[0].node.section.course
             gradeSchemeId = edges[0].node.gradingOption.gradeScheme6.id
-            const sectionRegistration = edges[0].node.id
-            let fetchedStudents = edges.map(edge => edge.node).map(record => record.student)
+            let fetchedStudents = edges.map(edge => edge.node)
             // console.log(fetchedStudents)
-            registrations = fetchedStudents.map(student => {
+            registrations = fetchedStudents.map(registration => {
+                const { student } = registration
                 student.gradeScheme = gradeSchemeId
-                student.sectionRegistration = sectionRegistration
+                student.sectionRegistration = registration.id
                 if (student.credentials && student.credentials.length) {
                     const bannerId = student.credentials.find(credential => credential.type === 'bannerId') || {}
                     student.credentials = { bannerId: bannerId.value }                
