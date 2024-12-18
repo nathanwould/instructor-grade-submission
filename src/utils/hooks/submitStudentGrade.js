@@ -27,7 +27,7 @@ export async function submitStudentGrade({
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Accept: 'application/vnd.hedtech.integration.v1.0.15+json'
+                Accept: 'application/vnd.hedtech.integration.v1.0.16+json'
             },
             body: JSON.stringify({ sectionRegistrationId, grade })
         });
