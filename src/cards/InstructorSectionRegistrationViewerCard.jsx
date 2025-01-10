@@ -14,13 +14,14 @@ import { useDataQuery, DataQueryProvider } from '@ellucian/experience-extension-
 import React, { Fragment, useMemo } from 'react';
 import { useData, useCardControl } from '@ellucian/experience-extension-utils';
 import { getSections } from '../utils/queries/getSections';
+import { useInstructorSections } from '../utils/hooks/useInstructorSections';
 
 const useStyles = makeStyles(() => ({
     card: {
         marginTop: 0,
-        marginRight: spacing40,
+        // marginRight: spacing40,
         marginBottom: 0,
-        marginLeft: spacing40
+        // marginLeft: spacing40
     },
     list: {
         flex: '1 1 auto',
@@ -70,6 +71,10 @@ const InstructorSectionRegistrationViewerCard = () => {
 
     const { data } = useDataQuery(resource);
     const sections = data;
+
+    const test = useInstructorSections();
+
+    console.log(test)
 
     const lastSectionIndex = !sections?.length ? 0 : sections?.length - 1;
 

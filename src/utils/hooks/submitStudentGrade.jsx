@@ -9,7 +9,6 @@ export async function submitStudentGrade({
     grade 
 }) {
     const resource = 'submit-student-grades';
-    // const resource = 'student-unverified-grades'
 
     try {
         const start = new Date();
@@ -26,7 +25,7 @@ export async function submitStudentGrade({
         const response = await authenticatedEthosFetch(resourcePath, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/vnd.hedtech.integration.student-unverified-grades-submissions.v1+json',
                 Accept: 'application/vnd.hedtech.integration.v1.0.16+json'
             },
             body: JSON.stringify({ sectionRegistrationId, grade })

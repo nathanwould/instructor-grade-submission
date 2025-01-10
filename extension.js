@@ -36,6 +36,7 @@ module.exports = {
                             instructor12: { id: { EQ: $personId } }
                         }
                     ) {
+                        totalCount
                         edges {
                             node {
                                 id

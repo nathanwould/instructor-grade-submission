@@ -23,7 +23,7 @@ import PropTypes from 'prop-types';
 
 const useStyles = makeStyles(() => ({
     card: {
-        margin: `0 ${spacing20}`
+        margin: `0 ${spacing20} 4rem`
     }
 }));
 
@@ -59,26 +59,26 @@ const SectionRegistrations = ({ schemeId, setSchemeId }) => {
                 </TableHead>
                 <TableBody>
                     {registrations && registrations.map(student => (
-                        <TableRow key={student.id}>
-                            <TableCell>{student.credentials?.bannerId}</TableCell>
-                            <TableCell>{student.names[0].fullName}</TableCell>
-                            <TableCell></TableCell>
-                            <TableCell></TableCell>
-                            <TableCell></TableCell>
-                            <TableCell></TableCell>
-                            <TableCell>
-                                <IconButton 
-                                    color="secondary" 
-                                    title="Edit"
-                                    onClick={() => {
-                                        setSelectedStudent(student)
-                                        setOpen(true)
-                                    }}
-                                >
-                                    <EditIcon />
-                                </IconButton>
-                            </TableCell>
-                        </TableRow>
+                            <TableRow key={student.id}>
+                                <TableCell>{student.credentials?.bannerId}</TableCell>
+                                <TableCell>{student.names[0].fullName}</TableCell>
+                                <TableCell>{student.grades.midtermGrade?.grade.value}</TableCell>
+                                <TableCell>{student.grades.midtermGrade?.grade.comments}</TableCell>
+                                <TableCell>{student.grades.finalGrade?.grade.value}</TableCell>
+                                <TableCell>{student.grades.finalGrade?.grade.comments}</TableCell>
+                                <TableCell>
+                                    <IconButton 
+                                        color="secondary" 
+                                        title="Edit"
+                                        onClick={() => {
+                                            setSelectedStudent(student)
+                                            setOpen(true)
+                                        }}
+                                    >
+                                        <EditIcon />
+                                    </IconButton>
+                                </TableCell>
+                            </TableRow>
                     ))}
                 </TableBody>
             </Table>
@@ -107,7 +107,7 @@ function SectionRegistrationsWithProvider() {
         {
             resource: 'get-registered-students',
             queryFunction: userTokenDataConnectQuery,
-            queryParameters: { accept: "application/vnd.hedtech.integration.v1.0.4+json" },
+            queryParameters: { accept: "application/vnd.hedtech.integration.v1+json" },
             queryKeys: { searchParameters: { sectionId } }
         },
         {
@@ -115,6 +115,12 @@ function SectionRegistrationsWithProvider() {
             queryFunction: userTokenDataConnectQuery,
             queryParameters: { accept: "application/vnd.hedtech.integration.v1+json" },
             queryKeys: { searchParameters: { schemeId } },
+        },
+        {
+            resource: 'get-grades',
+            queryFunction: userTokenDataConnectQuery,
+            queryParameters: { accept: "application/vnd.hedtech.integration.v1+json" },
+            queryKeys: { searchParameters: { sectionId } }
         }
 ]), [sectionId, schemeId]);
 

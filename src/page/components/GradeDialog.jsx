@@ -13,12 +13,16 @@ import {
     TextField,
     DatePicker,
     Button,
-    Skeleton
+    Skeleton,
+    Snackbar,
+    CircularProgress
 } from '@ellucian/react-design-system/core';
 import { useCardInfo, useData } from '@ellucian/experience-extension-utils';
+import { useDataQuery } from '@ellucian/experience-extension-extras';
 import PropTypes from 'prop-types';
 import { useFetchData } from '../../utils/hooks/useFetchData';
 import { submitStudentGrade } from '../../utils/hooks/submitStudentGrade';
+import { changeMidtermGrade } from '../../utils/hooks/changeMidtermGrade';
 
 const useStyles = makeStyles(() => ({
     Dialog: {
@@ -54,31 +58,58 @@ const GradeDialog = ({
     const { serverConfigContext: { cardPrefix }, cardId } = useCardInfo();
     const { authenticatedEthosFetch } = useData();
 
-    // console.log(selectedStudent?.sectionRegistration)
-
     const [grade, setGrade] = useState(initialGrade);
+    // const [editMode, setEditMode] = useState(false);
+
+    const [submitting, setSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [showSnackbar, setShowSnackbar] = useState(false);
+    const [snackbarMessage, setSnackBarMessage] = useState();
 
     const { gradeDefinitions, loading } = useFetchData({ schemeId });
+    const { refresh: refetchGrades } = useDataQuery('get-grades');
 
+    console.log(selectedStudent)
+    
     const clearInputs = () => {
         setGrade(initialGrade)
     };
 
     const handleClose = () => {
+        setSubmitting(false)
+        setSuccess(false)
         setSelectedStudent(undefined)
         setOpen(false)
-        clearInputs()
     };
 
     useEffect(() => {
-        console.log(grade)
-    }, [grade]);
+        if(!selectedStudent) clearInputs()
+    }, [selectedStudent])
 
     const handleChange = (e) => {
-        setGrade(prev => ({
-            ...prev,
-            [e.target.name]: e.target.value
-        }))
+        console.log(e.target.value)
+        setGrade(prev => {
+            if (e.target.name === 'gradeType') {
+                if (e.target.value === "3de8f785-d20a-4409-ade1-151414b8e423") {
+                    return {
+                        ...prev,
+                        [e.target.name]: e.target.value,
+                        grade: selectedStudent.grades.midtermGrade?.grade.id || null
+                    }
+                }
+                if (e.target.value === "dbcdc999-58db-4f43-b38c-a29eb1bd5507") {
+                    return {
+                        ...prev,
+                        [e.target.name]: e.target.value,
+                        grade: selectedStudent.grades.finalGrade?.grade.id || null
+                    }
+                }
+            }
+            return {
+                ...prev,
+                [e.target.name]: e.target.value
+            }
+        })
     }
 
     const handleDateChange = (date, key) => {
@@ -93,11 +124,58 @@ const GradeDialog = ({
         submitGrade({ selectedStudent, grade });
     };
 
+    const handleSuccess = (message) => {
+        console.log('Success!')
+        setSubmitting(false)
+        setSuccess(true)
+        refetchGrades()
+        handleClose()
+        showSnackbarMessage(message)
+    };
+
+    const handleFailure = (res) => {
+        setSubmitting(false)
+        console.log(res.status)
+        console.error(res.status)
+        showSnackbarMessage(res.status)
+    }
+
+    const showSnackbarMessage = useCallback(message => {
+        setShowSnackbar(true)
+        setSnackBarMessage(message)
+    }, [setShowSnackbar, setSnackBarMessage])
+
     const submitGrade = useCallback(async ({ selectedStudent, grade }) => {
         const sectionRegistrationId = selectedStudent?.sectionRegistration;
-        const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade })
-        if (res.status === 'success') {
-            console.log('Success!')
+        if (!selectedStudent.grades.midtermGrade && grade.gradeType === "3de8f785-d20a-4409-ade1-151414b8e423") {
+            setSubmitting(true)
+            console.log('firing!')
+            const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade })
+            if (res.status === 'success') {
+                handleSuccess('Grade submitted!')
+            } else {
+                handleFailure(res.status)
+            }
+        } else if (grade.gradeType === "3de8f785-d20a-4409-ade1-151414b8e423" && selectedStudent.grades.midtermGrade) {
+            setSubmitting(true)
+            const gradeId = selectedStudent.grades.id
+            console.log(gradeId)
+            const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
+            if (res.status === 'success') {
+                handleSuccess('Grade submitted!')
+            } else {
+                handleFailure(res)
+            }
+        } else if (grade.gradeType === "dbcdc999-58db-4f43-b38c-a29eb1bd5507") {
+            setSubmitting(true)
+            const gradeId = selectedStudent.grades.id
+            console.log(gradeId)
+            const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
+            if (res.status === 'success') {
+                handleSuccess('Grade submitted!')
+            } else {
+                handleFailure(res)
+            }
         }
     }, [authenticatedEthosFetch, cardId, cardPrefix])
 
@@ -184,13 +262,24 @@ const GradeDialog = ({
                         <Button 
                             type="submit" 
                             label="Submit"
+                            color="primary"
                         >
-                            Submit
+                            {success ?
+                                "Success!"
+                                :
+                                submitting ? 
+                                    <CircularProgress color="inherit" aria-valuetext="Submitting grade"/>
+                                    : "Submit"
+                            }
                         </Button>
                     </DialogActions>
                 </FormControl>
             </form>
-
+            <Snackbar
+                    open={showSnackbar}
+                    message={snackbarMessage}
+                    onClose={() => { setShowSnackbar(false); }}
+            />
         </Dialog>
     )
 }
