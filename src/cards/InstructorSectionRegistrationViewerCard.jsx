@@ -1,4 +1,4 @@
-import { spacing40 } from '@ellucian/react-design-system/core/styles/tokens';
+// import { spacing40 } from '@ellucian/react-design-system/core/styles/tokens';
 import {
     makeStyles,
     Typography, 

@@ -1,0 +1,44 @@
+{
+  "name": "change-midterm-grade",
+  "parameters": [
+    {
+      "name": "ethosAPIKey",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    }
+  ],
+  "apiDefinition": {
+    "authType": "userToken",
+    "httpVerb": "PUT"
+  },
+  "pipeline": [
+    "Format Request",
+    "Ethos Proxy Put"
+  ],
+  "segments": {
+    "Format Request": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const {\n    payload: {\n      sectionRegistrationId = '',\n      gradeId = '',\n      grade = {}\n    } = {}\n  } = message;\n  const { '__user': user } = context;\n  \n  const personId = user?.id;\n  \n  const reqBody = {\n    sectionRegistration: {\n      id: sectionRegistrationId\n    },\n    grade: {\n      type: {\n        id: grade.gradeType\n      },\n      grade: {\n        id: grade.grade\n      }\n    },\n    submittedBy: {\n      id: personId\n    }\n  };\n  \n  return {\n    payload: {\n      id: gradeId,\n      reqBody\n    }\n  }\n};\n"
+      }
+    },
+    "Ethos Proxy Put": {
+      "class": "ethosProxyPut",
+      "config": {
+        "resource": "student-unverified-grades",
+        "contentVersion": "1",
+        "acceptVersion": "1",
+        "altRepresentation": "student-unverified-grades-submissions",
+        "idFromPayload": "$.id",
+        "bodyPath": "$.reqBody",
+        "ignoreErrors": false,
+        "apiKey": "ethosAPIKey",
+        "allowConcurrent": false
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "get-grades",
+  "parameters": [
+    {
+      "name": "ethosAPIKey",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    },
+    {
+      "name": "sectionId",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "apiDefinition": {
+    "authType": "userToken",
+    "httpVerb": "GET"
+  },
+  "pipeline": [
+    "Ethos Proxy Get with Filter"
+  ],
+  "segments": {
+    "Ethos Proxy Get with Filter": {
+      "class": "ethosProxyGetFilter",
+      "config": {
+        "resource": "student-unverified-grades",
+        "filter": "?section={\"section\": {\"id\":\"{{context.sectionId}}\"}}",
+        "acceptVersions": [
+          "2"
+        ],
+        "cache": false,
+        "queryByPost": false,
+        "ignoreErrors": false,
+        "apiKey": "ethosAPIKey"
+      }
+    }
+  }
+}

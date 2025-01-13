@@ -23,6 +23,7 @@ import PropTypes from 'prop-types';
 import { useFetchData } from '../../utils/hooks/useFetchData';
 import { submitStudentGrade } from '../../utils/hooks/submitStudentGrade';
 import { changeMidtermGrade } from '../../utils/hooks/changeMidtermGrade';
+import { submitFinalGrade } from '../../utils/hooks/submitFinalGrade';
 
 const useStyles = makeStyles(() => ({
     Dialog: {
@@ -75,12 +76,12 @@ const GradeDialog = ({
         setGrade(initialGrade)
     };
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setSubmitting(false)
         setSuccess(false)
         setSelectedStudent(undefined)
         setOpen(false)
-    };
+    }, [setOpen, setSelectedStudent]);
 
     useEffect(() => {
         if(!selectedStudent) clearInputs()
@@ -117,28 +118,28 @@ const GradeDialog = ({
             ...prev,
             [key]: date.toISOString().slice(0,10)
         }))
-    }
-
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        submitGrade({ selectedStudent, grade });
     };
 
-    const handleSuccess = (message) => {
+    const handleSubmit = useCallback((e) => {
+        e.preventDefault()
+        submitGrade({ selectedStudent, grade });
+    }, [grade, selectedStudent, submitGrade]);
+
+    const handleSuccess = useCallback((message) => {
         console.log('Success!')
+        handleClose()
+        showSnackbarMessage(message)
         setSubmitting(false)
         setSuccess(true)
         refetchGrades()
-        handleClose()
-        showSnackbarMessage(message)
-    };
+    }, [refetchGrades, handleClose, showSnackbarMessage]);
 
-    const handleFailure = (res) => {
+    const handleFailure = useCallback((res) => {
         setSubmitting(false)
         console.log(res.status)
         console.error(res.status)
         showSnackbarMessage(res.status)
-    }
+    }, [showSnackbarMessage]);
 
     const showSnackbarMessage = useCallback(message => {
         setShowSnackbar(true)
@@ -149,7 +150,7 @@ const GradeDialog = ({
         const sectionRegistrationId = selectedStudent?.sectionRegistration;
         if (!selectedStudent.grades.midtermGrade && grade.gradeType === "3de8f785-d20a-4409-ade1-151414b8e423") {
             setSubmitting(true)
-            console.log('firing!')
+            // console.log('firing!')
             const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade })
             if (res.status === 'success') {
                 handleSuccess('Grade submitted!')
@@ -159,7 +160,7 @@ const GradeDialog = ({
         } else if (grade.gradeType === "3de8f785-d20a-4409-ade1-151414b8e423" && selectedStudent.grades.midtermGrade) {
             setSubmitting(true)
             const gradeId = selectedStudent.grades.id
-            console.log(gradeId)
+            // console.log(gradeId)
             const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
             if (res.status === 'success') {
                 handleSuccess('Grade submitted!')
@@ -169,15 +170,15 @@ const GradeDialog = ({
         } else if (grade.gradeType === "dbcdc999-58db-4f43-b38c-a29eb1bd5507") {
             setSubmitting(true)
             const gradeId = selectedStudent.grades.id
-            console.log(gradeId)
-            const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
+            // console.log(gradeId)
+            const res = await submitFinalGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
             if (res.status === 'success') {
                 handleSuccess('Grade submitted!')
             } else {
                 handleFailure(res)
             }
         }
-    }, [authenticatedEthosFetch, cardId, cardPrefix])
+    }, [authenticatedEthosFetch, cardId, cardPrefix, handleSuccess, handleFailure])
 
     return (
         <Dialog 
@@ -276,9 +277,9 @@ const GradeDialog = ({
                 </FormControl>
             </form>
             <Snackbar
-                    open={showSnackbar}
-                    message={snackbarMessage}
-                    onClose={() => { setShowSnackbar(false); }}
+                open={showSnackbar}
+                message={snackbarMessage}
+                onClose={() => { setShowSnackbar(false); }}
             />
         </Dialog>
     )

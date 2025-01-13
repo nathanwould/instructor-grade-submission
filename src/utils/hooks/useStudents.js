@@ -40,8 +40,9 @@ export function useStudents() {
                     student.grades.id = studentGrades.id
                     if (studentGrades.details?.grades.some(grade => grade.type.title === "Midterm")) {
                         student.grades.midtermGrade = studentGrades.details?.grades.find(grade => grade.type.title === "Midterm")
-                    } else if (studentGrades.details?.grades.some(grade => grade.type.title === "Final")) {
-                        student.grades.finalGrade = studentGrades.details?.grades.find(grade => grade.type.title === "Midterm")
+                    } 
+                    if (studentGrades.details?.grades.some(grade => grade.type.title === "Final")) {
+                        student.grades.finalGrade = studentGrades.details?.grades.find(grade => grade.type.title === "Final")
                     }
                 }
                 return student
