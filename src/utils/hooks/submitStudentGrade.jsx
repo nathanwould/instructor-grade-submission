@@ -36,6 +36,7 @@ export async function submitStudentGrade({
 
         let result;
         if (response) {
+            console.log(response)
             switch (response.status) {
                 case 200:
                     try {

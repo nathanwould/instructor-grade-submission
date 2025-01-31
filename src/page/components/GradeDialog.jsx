@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     makeStyles, 
-    Dialog, 
+    Dialog,
     withMobileDialog,
     DialogTitle,
     DialogContent,
     DialogActions,
+    Grid,
+    Avatar,
     Typography,
     FormControl,
     Dropdown,
@@ -14,10 +16,9 @@ import {
     DatePicker,
     Button,
     Skeleton,
-    Snackbar,
     CircularProgress
 } from '@ellucian/react-design-system/core';
-import { useCardInfo, useData } from '@ellucian/experience-extension-utils';
+import { useCardInfo, useData, useExtensionControl } from '@ellucian/experience-extension-utils';
 import { useDataQuery } from '@ellucian/experience-extension-extras';
 import PropTypes from 'prop-types';
 import { useFetchData } from '../../utils/hooks/useFetchData';
@@ -42,8 +43,9 @@ const initialGrade = {
     gradeType: null,
     comments: null,
     lastAttendance: null,
-    extensionDate: null
-}
+    extensionDate: null,
+    absences: null
+};
 
 const GradeDialog = ({
     open, 
@@ -51,25 +53,32 @@ const GradeDialog = ({
     selectedStudent,
     setSelectedStudent,
     courseName,
-    schemeId
+    schemeId,
+    gradeTypes,
+    setShowSnackbar,
+    setSnackbarMessage
 }) => {
     const classes = useStyles();
 
-    // const { setErrorMessage } = useExtensionControl();
+    const { setErrorMessage } = useExtensionControl();
     const { serverConfigContext: { cardPrefix }, cardId } = useCardInfo();
     const { authenticatedEthosFetch } = useData();
 
     const [grade, setGrade] = useState(initialGrade);
-    // const [editMode, setEditMode] = useState(false);
 
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
-    const [showSnackbar, setShowSnackbar] = useState(false);
-    const [snackbarMessage, setSnackBarMessage] = useState();
 
     const { gradeDefinitions, loading } = useFetchData({ schemeId });
     const { refresh: refetchGrades } = useDataQuery('get-grades');
 
+    const midtermGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Midterm")), [gradeTypes])
+    const finalGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Final")), [gradeTypes])
+    
+    // console.log(grade)
+
+    const incompleteGrade = gradeDefinitions?.find(grade => grade.grade.value === "I");
+    
     console.log(selectedStudent)
     
     const clearInputs = () => {
@@ -85,24 +94,32 @@ const GradeDialog = ({
 
     useEffect(() => {
         if(!selectedStudent) clearInputs()
-    }, [selectedStudent])
+    }, [selectedStudent]);
 
     const handleChange = (e) => {
         console.log(e.target.value)
         setGrade(prev => {
             if (e.target.name === 'gradeType') {
-                if (e.target.value === "3de8f785-d20a-4409-ade1-151414b8e423") {
+                if (e.target.value === midtermGradeType.id) {
                     return {
                         ...prev,
                         [e.target.name]: e.target.value,
-                        grade: selectedStudent.grades.midtermGrade?.grade.id || null
+                        grade: selectedStudent.grades.midtermGrade?.grade.id || null,
+                        comments: selectedStudent.grades.midtermGrade?.comments || null,
+                        lastAttendance: selectedStudent.grades.lastAttendance || null,
+                        extensionDate: selectedStudent.grades.extensionDate || null,
+                        absences: selectedStudent.grades.midtermGrade?.absences || null
                     }
                 }
-                if (e.target.value === "dbcdc999-58db-4f43-b38c-a29eb1bd5507") {
+                if (e.target.value === finalGradeType.id) {
                     return {
                         ...prev,
                         [e.target.name]: e.target.value,
-                        grade: selectedStudent.grades.finalGrade?.grade.id || null
+                        grade: selectedStudent.grades.finalGrade?.grade.id || null,
+                        comments: selectedStudent.grades.finalGrade?.comments || null,
+                        lastAttendance: selectedStudent.grades.finalGrade?.lastAttendance || null,
+                        extensionDate: selectedStudent.grades.extensionDate || null,
+                        absences: selectedStudent.grades.finalGrade?.absences || null
                     }
                 }
             }
@@ -111,12 +128,19 @@ const GradeDialog = ({
                 [e.target.name]: e.target.value
             }
         })
-    }
+    };
 
     const handleDateChange = (date, key) => {
         setGrade(prev => ({
             ...prev,
             [key]: date.toISOString().slice(0,10)
+        }))
+    };
+
+    const handleNumberChange = (n) => {
+        setGrade(prev => ({
+            ...prev,
+            absences: n
         }))
     };
 
@@ -126,51 +150,66 @@ const GradeDialog = ({
     }, [grade, selectedStudent, submitGrade]);
 
     const handleSuccess = useCallback((message) => {
+        setSuccess(true)
         console.log('Success!')
         handleClose()
-        showSnackbarMessage(message)
-        setSubmitting(false)
-        setSuccess(true)
         refetchGrades()
+        setTimeout(showSnackbarMessage, 400, message)
     }, [refetchGrades, handleClose, showSnackbarMessage]);
 
     const handleFailure = useCallback((res) => {
         setSubmitting(false)
+        setErrorMessage(res.message)
         console.log(res.status)
         console.error(res.status)
         showSnackbarMessage(res.status)
-    }, [showSnackbarMessage]);
+    }, [setErrorMessage, showSnackbarMessage]);
 
     const showSnackbarMessage = useCallback(message => {
         setShowSnackbar(true)
-        setSnackBarMessage(message)
-    }, [setShowSnackbar, setSnackBarMessage])
+        setSnackbarMessage(message)
+    }, [setShowSnackbar, setSnackbarMessage]);
 
     const submitGrade = useCallback(async ({ selectedStudent, grade }) => {
         const sectionRegistrationId = selectedStudent?.sectionRegistration;
-        if (!selectedStudent.grades.midtermGrade && grade.gradeType === "3de8f785-d20a-4409-ade1-151414b8e423") {
+        if (!selectedStudent.grades.midtermGrade && grade.gradeType === midtermGradeType?.id && selectedStudent.grades.finalGrade) {
             setSubmitting(true)
-            // console.log('firing!')
+            const gradeId = selectedStudent.grades.id
+            const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
+            if (res.status === 'success') {
+                handleSuccess()
+            } else {
+                console.log(res)
+                handleFailure(res)
+            }
+        } else if (!selectedStudent.grades.midtermGrade && grade.gradeType === midtermGradeType?.id) {
+            setSubmitting(true)
             const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade })
             if (res.status === 'success') {
                 handleSuccess('Grade submitted!')
             } else {
                 handleFailure(res.status)
             }
-        } else if (grade.gradeType === "3de8f785-d20a-4409-ade1-151414b8e423" && selectedStudent.grades.midtermGrade) {
+        } else if (grade.gradeType === midtermGradeType?.id && selectedStudent.grades.midtermGrade) {
             setSubmitting(true)
             const gradeId = selectedStudent.grades.id
-            // console.log(gradeId)
             const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
             if (res.status === 'success') {
                 handleSuccess('Grade submitted!')
             } else {
                 handleFailure(res)
             }
-        } else if (grade.gradeType === "dbcdc999-58db-4f43-b38c-a29eb1bd5507") {
+        } else if (grade.gradeType === finalGradeType?.id && !selectedStudent.grades.midtermGrade) {
+            setSubmitting(true)
+            const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade })
+            if (res.status === 'success') {
+                handleSuccess('Grade submitted!')
+            } else {
+                handleFailure(res.status)
+            }
+        } else if (grade.gradeType === finalGradeType?.id) {
             setSubmitting(true)
             const gradeId = selectedStudent.grades.id
-            // console.log(gradeId)
             const res = await submitFinalGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade })
             if (res.status === 'success') {
                 handleSuccess('Grade submitted!')
@@ -178,7 +217,7 @@ const GradeDialog = ({
                 handleFailure(res)
             }
         }
-    }, [authenticatedEthosFetch, cardId, cardPrefix, handleSuccess, handleFailure])
+    }, [authenticatedEthosFetch, cardId, cardPrefix, handleSuccess, handleFailure, midtermGradeType?.id, finalGradeType?.id]);
 
     return (
         <Dialog 
@@ -187,8 +226,18 @@ const GradeDialog = ({
             className={classes.Dialog}
         >
             <DialogTitle className={classes.DialogTitle}>
-                <Typography variant="h2">{selectedStudent?.names[0].fullName}</Typography>
-                <Typography variant="body1">{courseName}</Typography>
+                <Grid 
+                    container
+                    direction="row"
+                    alignItems="center"
+                    size="large"
+                >
+                    <Avatar sx={{ marginLeft: "1.5rem" }} />
+                    <Grid>
+                        <Typography variant="h2">{selectedStudent?.names[0].fullName}</Typography>
+                        <Typography variant="body1">{courseName}</Typography>
+                    </Grid>
+                </Grid>
             </DialogTitle>
 
             <form name="grade-submission-form" onSubmit={handleSubmit}>
@@ -202,8 +251,9 @@ const GradeDialog = ({
                             onChange={handleChange}
                             required
                         >   
-                            <DropdownItem label="Midterm" value="3de8f785-d20a-4409-ade1-151414b8e423" />
-                            <DropdownItem label="Final" value="dbcdc999-58db-4f43-b38c-a29eb1bd5507" />
+                            {gradeTypes && gradeTypes.map(type => (
+                                <DropdownItem key={type.id} label={type.title} value={type.id} />
+                            ))}
                         </Dropdown>
                         <Dropdown 
                             className={classes.DialogItem}
@@ -226,19 +276,10 @@ const GradeDialog = ({
                                     />
                             )}
                         </Dropdown>
-                        {grade.grade === 'aeb7fba5-072e-483f-90ad-62aa58c5c61a' &&
+                        {grade.grade === incompleteGrade?.id &&
                             <div className={classes.DialogItem}>
-                                <DatePicker
-                                    // className={classes.DialogItem}
-                                    label="Last Attended"
-                                    placeholder="Select a date"
-                                    value={grade?.lastAttendance}
-                                    onDateChange={(date) => handleDateChange(date, 'lastAttendance')}
-                                    required
-                                />
-                                <div className={classes.DialogItem} style={{marginTop: "1.5rem"}}>
+                                <div className={classes.DialogItem}>
                                     <DatePicker
-                                        // className={classes.DialogItem}
                                         label="Extension Date"
                                         placeholder="Select a date"
                                         value={grade?.extensionDate}
@@ -248,12 +289,38 @@ const GradeDialog = ({
                                 </div>
                             </div>
                         }
+                        <div className={classes.DialogItem}>
+                            <TextField
+                                className={classes.DialogItem}
+                                name="absences"
+                                label="Absences"
+                                type="number"
+                                value={grade?.absences}
+                                onChange={handleNumberChange}
+                                inputProps={{
+                                    min: 0,
+                                    max: 20
+                                }}
+
+                            />
+                        </div>
+                        <div className={classes.DialogItem}>
+                            <DatePicker
+                                label="Last Attendance"
+                                placeholder="Select a date"
+                                value={grade?.lastAttendance}
+                                onDateChange={(date) => handleDateChange(date, 'lastAttendance')}
+                                // required
+                            />
+                        </div>
                         <TextField
                             className={classes.DialogItem}
                             name="comments" 
                             label="Comments"
                             value={grade?.comments}
                             onChange={handleChange}
+                            maxCharacters={4000}
+                            rows="10"
                             fullWidth
                             multiline
                             required
@@ -276,11 +343,7 @@ const GradeDialog = ({
                     </DialogActions>
                 </FormControl>
             </form>
-            <Snackbar
-                open={showSnackbar}
-                message={snackbarMessage}
-                onClose={() => { setShowSnackbar(false); }}
-            />
+
         </Dialog>
     )
 }
@@ -291,7 +354,10 @@ GradeDialog.propTypes = {
     selectedStudent: PropTypes.object.isRequired,
     setSelectedStudent: PropTypes.func.isRequired,
     courseName: PropTypes.string.isRequired,
-    schemeId: PropTypes.string.isRequired
+    schemeId: PropTypes.string.isRequired,
+    gradeTypes: PropTypes.array,
+    setShowSnackbar: PropTypes.func.isRequired,
+    setSnackbarMessage: PropTypes.func.isRequired
 };
 
 export default withMobileDialog()(GradeDialog);

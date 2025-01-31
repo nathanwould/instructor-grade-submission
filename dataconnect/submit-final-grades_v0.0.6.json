@@ -22,8 +22,7 @@
       "config": {
         "pushUndefined": true,
         "stopOnError": false,
-        "draft": false,
-        "code": "function transform (message, context) {\n  \n  const { \n    payload: {\n      sectionRegistrationId = '',\n      gradeId = '',\n      grade = {}\n    } = {}\n  } = message;\n  const { '__user': user } = context;\n  \n  const personId = user?.id;\n  \n  const reqBody = {\n    sectionRegistration: {\n      id: sectionRegistrationId\n    },\n    grade: {\n      type: {\n        id: grade.gradeType\n      },\n      grade: {\n        id: grade.grade\n      }\n    },\n    submittedBy: {\n      id: personId\n    }\n  }\n  \n  return { \n    payload: {\n      id: gradeId,\n      reqBody\n    }\n  };\n}\n"
+        "code": "function transform (message, context) {\n  \n  const { \n    payload: {\n      sectionRegistrationId = '',\n      gradeId = '',\n      grade = {}\n    } = {}\n  } = message;\n  const { '__user': user } = context;\n  \n  const personId = user?.id;\n  \n  const reqBody = {\n    sectionRegistration: {\n      id: sectionRegistrationId\n    },\n    grade: {\n      type: {\n        id: grade.gradeType\n      },\n      grade: {\n        id: grade.grade\n      }\n    },\n    incompleteGrade: {\n      extensionDate: grade.extensionDate,\n      finalGrade: {\n        id: grade.finalGrade\n      }\n    },\n    lastAttendance: {\n      date: grade.lastAttendance\n    },\n    submittedBy: {\n      id: personId\n    }\n  }\n  \n  return { \n    payload: {\n      id: gradeId,\n      reqBody\n    }\n  };\n}\n"
       }
     },
     "Ethos Proxy Put": {

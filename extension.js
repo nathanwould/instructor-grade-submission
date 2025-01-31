@@ -84,6 +84,22 @@ module.exports = {
                     }
                 }
             `
+        }],
+        'get-grade-types': [{
+            query: `
+                {
+                    sectionGradeTypes6(
+		                sort: { title: DESC }
+	                )  {
+                        edges {
+                            node {
+                                id
+                                title
+                            }
+                        }
+                    }
+                }
+            `
         }]
     }
 };
