@@ -13,7 +13,7 @@ module.exports = {
     },
     cards: [{
         type: 'InstructorSectionRegistrationViewerCard',
-        source: './src/cards/InstructorSectionRegistrationViewerCard',
+        source: './src/cards/InstructorSections.jsx',
         title: 'Instructor Section Registration Viewer Card',
         displayCardType: 'InstructorSectionRegistrationViewer Card',
         description: 'This is an introductory card to the Ellucian Experience SDK',
@@ -95,6 +95,42 @@ module.exports = {
                             node {
                                 id
                                 title
+                            }
+                        }
+                    }
+                }
+            `
+        }],
+        'instructional-events': [{
+            query: `
+                query getInstructionalEvents($sectionId: ID) {
+                    instructionalEvents11(
+                        filter: {
+                            section16: {
+                                id: { EQ: $sectionId }
+                            }
+                        }
+                    ) {
+                        edges {
+                            node {
+                                id
+                                section16 {
+                                    id
+                                    course16 {
+                                        titles {
+                                            value
+                                        }
+                                    }
+                                }
+                                recurrence {
+                                    repeatRule {
+                                        daysOfWeek
+                                    }
+                                    timePeriod {
+                                        startOn
+                                        endOn
+                                    }
+                                }
                             }
                         }
                     }

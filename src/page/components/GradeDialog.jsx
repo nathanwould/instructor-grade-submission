@@ -44,6 +44,7 @@ const initialGrade = {
     comments: null,
     lastAttendance: null,
     extensionDate: null,
+    incompleteGrade: null,
     absences: null
 };
 
@@ -72,14 +73,13 @@ const GradeDialog = ({
     const { gradeDefinitions, loading } = useFetchData({ schemeId });
     const { refresh: refetchGrades } = useDataQuery('get-grades');
 
-    const midtermGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Midterm")), [gradeTypes])
-    const finalGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Final")), [gradeTypes])
+    const midtermGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Midterm")), [gradeTypes]);
+    const finalGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Final")), [gradeTypes]);
+    const incompleteGrade = gradeDefinitions?.find(grade => grade.grade.value === "I");
+    const incompleteGradeOptions = gradeDefinitions?.filter(grade => grade.grade.value !== "I" && grade.grade.value !== "W");
     
     // console.log(grade)
-
-    const incompleteGrade = gradeDefinitions?.find(grade => grade.grade.value === "I");
-    
-    console.log(selectedStudent)
+    // console.log(selectedStudent)
     
     const clearInputs = () => {
         setGrade(initialGrade)
@@ -106,8 +106,9 @@ const GradeDialog = ({
                         [e.target.name]: e.target.value,
                         grade: selectedStudent.grades.midtermGrade?.grade.id || null,
                         comments: selectedStudent.grades.midtermGrade?.comments || null,
-                        lastAttendance: selectedStudent.grades.lastAttendance || null,
-                        extensionDate: selectedStudent.grades.extensionDate || null,
+                        lastAttendance: new Date(selectedStudent.grades.lastAttendance) || null,
+                        extensionDate: new Date(selectedStudent.grades.incompleteGrade?.extensionDate) || null,
+                        incompleteGrade: selectedStudent.grades.incompleteGrade?.finalGrade.id || null,
                         absences: selectedStudent.grades.midtermGrade?.absences || null
                     }
                 }
@@ -117,8 +118,9 @@ const GradeDialog = ({
                         [e.target.name]: e.target.value,
                         grade: selectedStudent.grades.finalGrade?.grade.id || null,
                         comments: selectedStudent.grades.finalGrade?.comments || null,
-                        lastAttendance: selectedStudent.grades.finalGrade?.lastAttendance || null,
-                        extensionDate: selectedStudent.grades.extensionDate || null,
+                        lastAttendance: new Date(selectedStudent.grades.lastAttendance) || null,
+                        extensionDate: new Date(selectedStudent.grades.incompleteGrade?.extensionDate) || null,
+                        incompleteGrade: selectedStudent.grades.incompleteGrade?.finalGrade.id || null,
                         absences: selectedStudent.grades.finalGrade?.absences || null
                     }
                 }
@@ -224,6 +226,8 @@ const GradeDialog = ({
             open={open} 
             onClose={handleClose} 
             className={classes.Dialog}
+            maxWidth="md"
+            fullWidth={true}
         >
             <DialogTitle className={classes.DialogTitle}>
                 <Grid 
@@ -278,6 +282,31 @@ const GradeDialog = ({
                         </Dropdown>
                         {grade.grade === incompleteGrade?.id &&
                             <div className={classes.DialogItem}>
+                                <Dropdown
+                                    className={classes.DialogItem}
+                                    name="incompleteGrade"
+                                    label="Default Grade" 
+                                    value={grade?.incompleteGrade}
+                                    onChange={handleChange}
+                                    required 
+                                >
+                                    {incompleteGradeOptions?.map(item => 
+                                        <DropdownItem 
+                                            key={item.id} 
+                                            label={item.grade.value} 
+                                            value={item.id} 
+                                        />
+                                    )}
+                                </Dropdown>
+                                <div className={classes.DialogItem}>
+                                    <DatePicker
+                                        label="Last Attendance"
+                                        placeholder="Select a date"
+                                        value={grade?.lastAttendance}
+                                        onDateChange={(date) => handleDateChange(date, 'lastAttendance')}
+                                        required
+                                    />
+                                </div>
                                 <div className={classes.DialogItem}>
                                     <DatePicker
                                         label="Extension Date"
@@ -302,15 +331,6 @@ const GradeDialog = ({
                                     max: 20
                                 }}
 
-                            />
-                        </div>
-                        <div className={classes.DialogItem}>
-                            <DatePicker
-                                label="Last Attendance"
-                                placeholder="Select a date"
-                                value={grade?.lastAttendance}
-                                onDateChange={(date) => handleDateChange(date, 'lastAttendance')}
-                                // required
                             />
                         </div>
                         <TextField
@@ -360,4 +380,4 @@ GradeDialog.propTypes = {
     setSnackbarMessage: PropTypes.func.isRequired
 };
 
-export default withMobileDialog()(GradeDialog);
+export default withMobileDialog({ breakpoint: 'md' })(GradeDialog);

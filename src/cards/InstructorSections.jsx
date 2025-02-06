@@ -1,22 +1,23 @@
 import { ArrowRight } from '@ellucian/ds-icons/lib';
-import { useCardControl } from '@ellucian/experience-extension-utils';
+import { useCardControl, useData } from '@ellucian/experience-extension-utils';
 import {
+    makeStyles,
     IconButton,
     Illustration,
     IMAGES,
     List,
     ListItem,
+    ListItemText,
     Typography,
     Divider,
     Skeleton
 } from '@ellucian/react-design-system/core';
-import { withStyles } from '@ellucian/react-design-system/core/styles';
 import { spacing40 } from '@ellucian/react-design-system/core/styles/tokens';
-import PropTypes from 'prop-types';
-import React, { Fragment } from "react";
-import { useGraphQLFetch } from '../utils/hooks/useGraphQl';
+import React, { useMemo, Fragment } from "react";
+import { useDataQuery, DataQueryProvider } from '@ellucian/experience-extension-extras';
+import { getSections } from '../utils/queries/getSections';
 
-const styles = () => ({
+const useStyles = makeStyles(() => ({
     card: {
         marginTop: 0,
         marginRight: spacing40,
@@ -60,38 +61,41 @@ const styles = () => ({
         alignItems: 'center',
         justifyContent: 'center'
     }
-});
-const Test = (props) => {
-    const { data } = useGraphQLFetch();
-    const { classes } = props;
+}));
+const InstructorSections = () => {
+    const { data: sections, isFetching } = useDataQuery('instructor-section-registration-viewer');
+    const classes = useStyles();
     const { navigateToPage } = useCardControl();
 
-    const lastSectionIndex = !data.fetchedData.sections?.length ? 0 : data.totalCount;
+    const lastSectionIndex = !sections?.length ? 0 : sections?.length - 1;
 
     return (
         <div>
             {
-                data.loading ?
+                isFetching ?
                     <List className={classes.list}>
                         <ListItem className={classes.ListItem}>
-                            <Skeleton paragraph={{ width: '10sku' }} />
+                            <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />} />
                         </ListItem>
                         <ListItem className={classes.ListItem}>
-                            <Skeleton paragraph={{ width: '10sku' }} />
+                            <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />}/>
                         </ListItem>
                         <ListItem className={classes.ListItem}>
-                            <Skeleton paragraph={{ width: '10sku' }} />
+                            <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />}/>
                         </ListItem>
-                    </List> :
-                    data.totalCount === 0 ?
+                    </List> 
+                    : sections?.length === 0 ?
                         <>
                             <Illustration name={IMAGES.NEWS} />
                             <Typography>No sections found.</Typography>
-                        </> :
+                        </> 
+                        :
                         <List
                             className={classes.list}
                         >
-                            {data.fetchedData.map((section, index) => (
+                            {sections?.map((section, index) => {
+                                const { daysOfWeek, startOn, endOn } = section.instructionalEvents[0]
+                                return (
                                 <Fragment key={section.id}>
                                     <ListItem
                                         className={classes.listItem}
@@ -99,35 +103,48 @@ const Test = (props) => {
                                         <div
                                             className={classes.listItemLine}
                                         >
-                                            <Typography variant={'h3'}>{section.section16.course16.titles[0].value}</Typography>
+                                            <ListItemText 
+                                                variant={'h3'} 
+                                                primary={isFetching ? <Skeleton paragraph={{ width: '10sku' }} /> : <strong>{section.course.title}</strong>}
+                                                secondary={isFetching ? <Skeleton paragraph={{ width: '6sku' }} /> : `${section.course.subject.title} ${section.course.number} | ${daysOfWeek} ${startOn}-${endOn}`}
+                                            />
                                             <IconButton
                                                 className={classes.iconButton}
                                                 color="secondary"
-                                                onClick={() => navigateToPage({ route: `sections/${section.section16.sectionID}` })}
+                                                onClick={() => navigateToPage({ route: `sections/${section.id}` })}
                                             >
                                                 <ArrowRight
                                                     className={classes.icon}
                                                 />
                                             </IconButton>
                                         </div>
-                                        <div
-                                            className={classes.listItemLine}
-                                        >
-                                            <Typography variant={'body2'}>{section.section16.course16.subject6.title} {section.section16.course16.number}</Typography>
-                                        </div>
                                     </ListItem>
                                     {index !== lastSectionIndex && (
                                         <Divider className={classes.divider} variant={'middle'} />
                                     )}
                                 </Fragment>
-                            ))}
+                            )})}
                         </List>
             }
 
         </div>
     )
 }
-Test.propTypes = {
-    classes: PropTypes.object.isRequired,
-};
-export default withStyles(styles)(Test);
+
+function CardWithProvider() {
+    const { getEthosQuery } = useData();
+
+    const options = useMemo(() => ({
+            resource: 'instructor-section-registration-viewer',
+            queryFunction: getSections,
+            queryParameters: { getEthosQuery },
+            queryKeys: 'get-sections'
+    }), [getEthosQuery]);
+
+    return (
+        <DataQueryProvider options={options}>
+            <InstructorSections />
+        </DataQueryProvider>
+    )
+}
+export default CardWithProvider;

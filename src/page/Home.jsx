@@ -17,13 +17,18 @@ import {
 import { Edit as EditIcon } from '@ellucian/ds-icons/lib';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { 
+import {
+    useDataQuery, 
     userTokenDataConnectQuery, 
     MultiDataQueryProvider 
 } from '@ellucian/experience-extension-extras';
-import { usePageControl } from '@ellucian/experience-extension-utils';
-import { useGraphQLFetch } from '../utils/hooks/useGraphQl';
+import { 
+    // useUserInfo,
+    useData, 
+    usePageControl } from '@ellucian/experience-extension-utils';
+// import { useGraphQLFetch } from '../utils/hooks/useGraphQl';
 import { useStudents } from '../utils/hooks/useStudents';
+import { getSections } from '../utils/queries/getSections';
 import GradeDialog from './components/GradeDialog';
 import PropTypes from 'prop-types';
 import { useGradeTypes } from '../utils/queries/getGradeTypes';
@@ -51,7 +56,9 @@ const SectionRegistrations = ({
     const [showSnackbar, setShowSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState();
 
-    const { data } = useGraphQLFetch();
+    const { data: sections, isFetching: isFetchingSections } = useDataQuery('instructor-section-registration-viewer')
+
+    // console.log(sections)
 
     const { course, registrations, isFetching } = useStudents();
     const { gradeTypes } = useGradeTypes();
@@ -74,19 +81,21 @@ const SectionRegistrations = ({
                     value={sectionId}
                     onChange={handleChangeSection}
                 >
-                    {data.isLoading ?
+                    {isFetchingSections ?
                         <DropdownItem label={<Skeleton paragraph={{ width: '10sku' }} />} />
-                        :   data.totalCount === 0 ? 
+                        :   sections?.length === 0 ? 
                             <DropdownItem>
                                 <Typography>No courses found</Typography>
                             </DropdownItem>
-                            : data.fetchedData.map(section => (
-                                <DropdownItem
-                                    key={section.id}
-                                    value={section.section16.sectionID}
-                                    label={`${course?.subject?.title} ${course?.number}`}
-                                />
-                            ))
+                            : sections?.map(section => {
+                                const { daysOfWeek, startOn, endOn } = section.instructionalEvents[0];
+                                return (
+                                    <DropdownItem
+                                        key={section.id}
+                                        value={section.id}
+                                        label={`${section.course.subject.title} ${section.course.number} | ${daysOfWeek} ${startOn}-${endOn}`}
+                                    />
+                            )})
                     }
                 </Dropdown>
             </div>
@@ -96,36 +105,52 @@ const SectionRegistrations = ({
                         <Skeleton paragraph={{ width: '40%'}} />
                     </div>
                 </div>
-                :
+                : course ?
                 <div>
                     <Typography variant='h1'>{course ? course?.titles[0]?.value : "Not Found"}</Typography>
-                    <Typography variant='h3'>{course ? `${course?.subject?.title} ${course?.number}` : "Not Found"}</Typography>
-                    <Table>
+                    <Typography variant='h3'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
+                    <Table layout={{ variant: 'card', breakpoint: 'sm' }}>
                         <TableHead>
                             <TableRow>
                                 <TableCell>BannerID</TableCell>
                                 <TableCell>Name</TableCell>
-                                <TableCell>Midterm Status</TableCell>
                                 <TableCell>Midterm Grade</TableCell>
-                                <TableCell>Midterm Comments</TableCell>
-                                <TableCell>Final Status</TableCell>
+                                <TableCell size="sm">Midterm Comments</TableCell>
+                                <TableCell>Midterm Status</TableCell>
                                 <TableCell>Final Grade</TableCell>
-                                <TableCell>Final Comments</TableCell>
+                                <TableCell size="sm">Final Comments</TableCell>
+                                <TableCell>Final Status</TableCell>
                                 <TableCell>Edit</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {registrations && registrations.map(student => (
                                     <TableRow key={student.id}>
-                                        <TableCell>{student.credentials?.bannerId}</TableCell>
-                                        <TableCell>{student.names[0].fullName}</TableCell>
-                                        <TableCell>{student.grades.midtermGrade?.grade.value}</TableCell>
-                                        <TableCell>{student.grades.midtermGrade?.grade.comments}</TableCell>
-                                        <TableCell><StatusLabel type="success" text="submitted" /></TableCell>
-                                        <TableCell>{student.grades.finalGrade?.grade.value}</TableCell>
-                                        <TableCell>{student.grades.finalGrade?.grade.comments}</TableCell>
-                                        <TableCell><StatusLabel type="pending" text="saved" /></TableCell>
-                                        <TableCell>
+                                        <TableCell columnName="BannerID">
+                                            {student.credentials?.bannerId}
+                                        </TableCell>
+                                        <TableCell columnName="Name">
+                                            {student.names[0].lastName}, {student.names[0].firstName}
+                                        </TableCell>
+                                        <TableCell columnName="Midterm Grade">
+                                            {student.grades.midtermGrade?.grade.value}
+                                        </TableCell>
+                                        <TableCell columnName="Midterm Comments" size="sm">
+                                            {student.grades.midtermGrade?.grade.comments}
+                                        </TableCell>
+                                        <TableCell columnName="Midterm Status">
+                                            <StatusLabel type="success" text="submitted" />
+                                        </TableCell>
+                                        <TableCell columnName="Final Grade">
+                                            {student.grades.finalGrade?.grade.value}
+                                        </TableCell>
+                                        <TableCell columnName="Final Comments" size="sm">
+                                            {student.grades.finalGrade?.grade.comments}
+                                        </TableCell>
+                                        <TableCell columnName="Final Status">
+                                            <StatusLabel type="pending" text="saved" />
+                                        </TableCell>
+                                        <TableCell columnName="Edit">
                                             <IconButton 
                                                 color="secondary" 
                                                 title="Edit"
@@ -153,6 +178,11 @@ const SectionRegistrations = ({
                         setSnackbarMessage={setSnackbarMessage}
                     />
                 </div>
+                :
+                <div>
+                    <Typography variant='h1'>{course ? course?.titles[0]?.value : "Not Found"}</Typography>
+                    <Typography variant='h3'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
+                </div>
             }
             <Snackbar
                 open={showSnackbar}
@@ -171,6 +201,7 @@ SectionRegistrations.propTypes = {
 
 function SectionRegistrationsWithProvider() {
     const { sectionId } = useParams();
+    const { getEthosQuery } = useData();
 
     const [schemeId, setSchemeId] = useState();
     
@@ -180,7 +211,7 @@ function SectionRegistrationsWithProvider() {
         {
             resource: 'get-registered-students',
             queryFunction: userTokenDataConnectQuery,
-            queryParameters: defaultParams,
+            queryParameters: { accept: "application/vnd.hedtech.integration.v1.0.7+json" },
             queryKeys: { searchParameters: { sectionId } }
         },
         {
@@ -195,7 +226,13 @@ function SectionRegistrationsWithProvider() {
             queryParameters: defaultParams,
             queryKeys: { searchParameters: { sectionId } }
         },
-]), [sectionId, schemeId, defaultParams]);
+        {
+            resource: 'instructor-section-registration-viewer',
+            queryFunction: getSections,
+            queryParameters: { getEthosQuery },
+            queryKeys: 'get-sections'
+        }
+]), [sectionId, schemeId, defaultParams, getEthosQuery]);
 
     return (
         <MultiDataQueryProvider options={options}>

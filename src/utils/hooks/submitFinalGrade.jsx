@@ -28,7 +28,7 @@ export async function submitFinalGrade({
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                Accept: 'application/vnd.hedtech.integration.v0.0.5+json',
+                Accept: 'application/vnd.hedtech.integration.v0.0.8+json',
             },
             body: JSON.stringify({ sectionRegistrationId, gradeId, grade })
         });
