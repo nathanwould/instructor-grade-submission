@@ -22,7 +22,6 @@ export async function getSections({ queryParameters }) {
         
         const instructionalEventPromises = [];
         for (const section of fetchedSections) {
-            // console.log(section.section16)
             const promise = getEthosQuery({ queryId: 'instructional-events', properties: { sectionId: section.section16.sectionID } })
             instructionalEventPromises.push(promise)
         }
@@ -30,7 +29,6 @@ export async function getSections({ queryParameters }) {
         const results = await Promise.all(instructionalEventPromises)
         results.forEach((result, index) => {
             const fetchedSection = fetchedSections[index];
-            // console.log(fetchedSection)
             const { section16: { sectionID, course16: { number, subject6, titles } } } = fetchedSection;
             const title = titles && titles.length > 0 ? titles[0].value : '';
             
@@ -67,7 +65,7 @@ export async function getSections({ queryParameters }) {
                     endOn,
                     daysOfWeek: meetingDays
                 })
-                console.log(section)
+                // console.log(section)
                 sections.push(section)
             }
         })

@@ -22,8 +22,7 @@ import {
     userTokenDataConnectQuery, 
     MultiDataQueryProvider 
 } from '@ellucian/experience-extension-extras';
-import { 
-    // useUserInfo,
+import {
     useData, 
     usePageControl } from '@ellucian/experience-extension-utils';
 // import { useGraphQLFetch } from '../utils/hooks/useGraphQl';
@@ -43,9 +42,9 @@ const useStyles = makeStyles(() => ({
 }));
 
 const SectionRegistrations = ({ 
-    schemeId, 
-    setSchemeId, 
-    sectionId
+    sectionId, 
+    sectionRegistrationId,
+    setSectionRegistrationId
  }) => {
     const classes = useStyles();
     const { setPageTitle, navigateToPage } = usePageControl("Sections");
@@ -57,15 +56,15 @@ const SectionRegistrations = ({
     const [snackbarMessage, setSnackbarMessage] = useState();
 
     const { data: sections, isFetching: isFetchingSections } = useDataQuery('instructor-section-registration-viewer')
-
-    // console.log(sections)
-
+    
     const { course, registrations, isFetching } = useStudents();
     const { gradeTypes } = useGradeTypes();
+    
+    // console.log(sectionRegistrationId)
 
-    useEffect(() => {
-        setSchemeId(selectedStudent?.gradeScheme)
-    }, [selectedStudent, setSchemeId])
+    // useEffect(() => {
+    //     setSchemeId(selectedStudent?.gradeScheme)
+    // }, [selectedStudent, setSchemeId])
 
     const handleChangeSection = (e) => {
         navigateToPage({ route: `sections/${e.target.value}` })
@@ -85,7 +84,7 @@ const SectionRegistrations = ({
                         <DropdownItem label={<Skeleton paragraph={{ width: '10sku' }} />} />
                         :   sections?.length === 0 ? 
                             <DropdownItem>
-                                <Typography>No courses found</Typography>
+                                <Typography>No sections found</Typography>
                             </DropdownItem>
                             : sections?.map(section => {
                                 const { daysOfWeek, startOn, endOn } = section.instructionalEvents[0];
@@ -109,6 +108,7 @@ const SectionRegistrations = ({
                 <div>
                     <Typography variant='h1'>{course ? course?.titles[0]?.value : "Not Found"}</Typography>
                     <Typography variant='h3'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
+                    <Typography variant='p'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
                     <Table layout={{ variant: 'card', breakpoint: 'sm' }}>
                         <TableHead>
                             <TableRow>
@@ -156,6 +156,7 @@ const SectionRegistrations = ({
                                                 title="Edit"
                                                 onClick={() => {
                                                     setSelectedStudent(student)
+                                                    setSectionRegistrationId(student.sectionRegistration)
                                                     setOpen(true)
                                                 }}
                                             >
@@ -172,10 +173,11 @@ const SectionRegistrations = ({
                         selectedStudent={selectedStudent}
                         setSelectedStudent={setSelectedStudent}
                         courseName={course?.titles[0].value}
-                        schemeId={schemeId}
                         gradeTypes={gradeTypes}
                         setShowSnackbar={setShowSnackbar}
                         setSnackbarMessage={setSnackbarMessage}
+                        sectionRegistrationId={sectionRegistrationId}
+                        setSectionRegistrationId={setSectionRegistrationId}
                     />
                 </div>
                 :
@@ -194,20 +196,20 @@ const SectionRegistrations = ({
 };
 
 SectionRegistrations.propTypes = {
-    schemeId: PropTypes.string,
-    setSchemeId: PropTypes.func.isRequired,
-    sectionId: PropTypes.string
+    sectionId: PropTypes.string,
+    sectionRegistrationId: PropTypes.string,
+    setSectionRegistrationId: PropTypes.func.isRequired
 }
 
 function SectionRegistrationsWithProvider() {
     const { sectionId } = useParams();
     const { getEthosQuery } = useData();
 
-    const [schemeId, setSchemeId] = useState();
+    const [sectionRegistrationId, setSectionRegistrationId] = useState();
     
     const defaultParams = useMemo(() => ({ accept: "application/vnd.hedtech.integration.v1+json" }), [])
 
-    const options = useMemo(() => ([
+    const options = /*useMemo(() => (*/[
         {
             resource: 'get-registered-students',
             queryFunction: userTokenDataConnectQuery,
@@ -215,10 +217,10 @@ function SectionRegistrationsWithProvider() {
             queryKeys: { searchParameters: { sectionId } }
         },
         {
-            resource: 'get-grade-definitions',
+            resource: 'get-grade-options',
             queryFunction: userTokenDataConnectQuery,
             queryParameters: defaultParams,
-            queryKeys: { searchParameters: { schemeId } },
+            // queryKeys: { searchParameters: { sectionRegistrationId } },
         },
         {
             resource: 'get-grades',
@@ -232,14 +234,14 @@ function SectionRegistrationsWithProvider() {
             queryParameters: { getEthosQuery },
             queryKeys: 'get-sections'
         }
-]), [sectionId, schemeId, defaultParams, getEthosQuery]);
+]/*), [sectionId, schemeId, defaultParams, getEthosQuery, sectionRegistrationId]);*/
 
     return (
         <MultiDataQueryProvider options={options}>
             <SectionRegistrations 
-                setSchemeId={setSchemeId} 
-                schemeId={schemeId} 
                 sectionId={sectionId}
+                sectionRegistrationId={sectionRegistrationId}
+                setSectionRegistrationId={setSectionRegistrationId}
             />
         </MultiDataQueryProvider>
     )

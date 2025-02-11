@@ -8,10 +8,9 @@ export const useGraphQLFetch = () => {
     useEffect(() => {
         (
             async () => {
-                // console.log('Fetching courses')
                 try {
                     setData(prev => ({ ...prev, loading: true }))
-                    // console.log(data.loading)
+                    
                     const res = await getEthosQuery({ 
                         queryId: 'get-sections', 
                         properties: { instructorId: "8ab5150b-b59b-49e3-8db7-dce74dab6f01" } 

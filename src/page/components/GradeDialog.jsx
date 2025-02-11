@@ -21,10 +21,10 @@ import {
 import { useCardInfo, useData, useExtensionControl } from '@ellucian/experience-extension-utils';
 import { useDataQuery } from '@ellucian/experience-extension-extras';
 import PropTypes from 'prop-types';
-import { useFetchData } from '../../utils/hooks/useFetchData';
 import { submitStudentGrade } from '../../utils/hooks/submitStudentGrade';
 import { changeMidtermGrade } from '../../utils/hooks/changeMidtermGrade';
 import { submitFinalGrade } from '../../utils/hooks/submitFinalGrade';
+import { useGradeOptions } from '../../utils/hooks/useGradeOptions';
 
 const useStyles = makeStyles(() => ({
     Dialog: {
@@ -54,10 +54,11 @@ const GradeDialog = ({
     selectedStudent,
     setSelectedStudent,
     courseName,
-    schemeId,
     gradeTypes,
     setShowSnackbar,
-    setSnackbarMessage
+    setSnackbarMessage,
+    sectionRegistrationId,
+    setSectionRegistrationId
 }) => {
     const classes = useStyles();
 
@@ -70,27 +71,33 @@ const GradeDialog = ({
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
 
-    const { gradeDefinitions, loading } = useFetchData({ schemeId });
+    const { gradeOptions, fetching } = useGradeOptions({ sectionRegistrationId })
+    
     const { refresh: refetchGrades } = useDataQuery('get-grades');
-
+    
     const midtermGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Midterm")), [gradeTypes]);
     const finalGradeType = useMemo(() => (gradeTypes?.find(type => type.title === "Final")), [gradeTypes]);
-    const incompleteGrade = gradeDefinitions?.find(grade => grade.grade.value === "I");
-    const incompleteGradeOptions = gradeDefinitions?.filter(grade => grade.grade.value !== "I" && grade.grade.value !== "W");
+    const incompleteGrade = gradeOptions?.find(grade => grade.value === "I");
+    const incompleteGradeOptions = gradeOptions?.filter(grade => grade.value !== "I" && grade.value !== "W");
     
-    // console.log(grade)
-    // console.log(selectedStudent)
+    console.log(selectedStudent)
     
     const clearInputs = () => {
         setGrade(initialGrade)
     };
-
+    
     const handleClose = useCallback(() => {
         setSubmitting(false)
         setSuccess(false)
         setSelectedStudent(undefined)
+        setSectionRegistrationId(undefined)
         setOpen(false)
-    }, [setOpen, setSelectedStudent]);
+    }, [setOpen, setSelectedStudent, setSectionRegistrationId]);
+    
+    // useEffect(() => {
+    //     console.log(sectionRegistrationId)
+    //     refetchGradeOptions('get-grade-options', { queryKeys: { searchParameters: { sectionRegistrationId } } })
+    // }, [sectionRegistrationId])
 
     useEffect(() => {
         if(!selectedStudent) clearInputs()
@@ -238,7 +245,7 @@ const GradeDialog = ({
                 >
                     <Avatar sx={{ marginLeft: "1.5rem" }} />
                     <Grid>
-                        <Typography variant="h2">{selectedStudent?.names[0].fullName}</Typography>
+                        <Typography variant="h2">{selectedStudent?.names[0].firstName} {selectedStudent?.names[0].lastName}</Typography>
                         <Typography variant="body1">{courseName}</Typography>
                     </Grid>
                 </Grid>
@@ -267,20 +274,21 @@ const GradeDialog = ({
                             onChange={handleChange}
                             required 
                         >
-                            { loading ?
+                            { fetching ?
                                 <>
                                     <DropdownItem label={<Skeleton paragraph={{ width: '10sku' }} />} />
                                 </>
                             
-                                : gradeDefinitions?.map(item => 
+                                : gradeOptions?.map(item =>
                                     <DropdownItem 
-                                        key={item.id} 
-                                        label={item.grade.value} 
-                                        value={item.id} 
+                                        key={item.grade.id}
+                                        label={item.value}
+                                        value={item.grade.id}
                                     />
-                            )}
+                                )
+                            }
                         </Dropdown>
-                        {grade.grade === incompleteGrade?.id &&
+                        {grade.grade === incompleteGrade?.grade.id &&
                             <div className={classes.DialogItem}>
                                 <Dropdown
                                     className={classes.DialogItem}
@@ -292,9 +300,9 @@ const GradeDialog = ({
                                 >
                                     {incompleteGradeOptions?.map(item => 
                                         <DropdownItem 
-                                            key={item.id} 
-                                            label={item.grade.value} 
-                                            value={item.id} 
+                                            key={item.grade.id} 
+                                            label={item.value} 
+                                            value={item.grade.id} 
                                         />
                                     )}
                                 </Dropdown>
@@ -377,7 +385,9 @@ GradeDialog.propTypes = {
     schemeId: PropTypes.string.isRequired,
     gradeTypes: PropTypes.array,
     setShowSnackbar: PropTypes.func.isRequired,
-    setSnackbarMessage: PropTypes.func.isRequired
+    setSnackbarMessage: PropTypes.func.isRequired,
+    sectionRegistrationId: PropTypes.string.isRequired,
+    setSectionRegistrationId: PropTypes.func.isRequired
 };
 
 export default withMobileDialog({ breakpoint: 'md' })(GradeDialog);
