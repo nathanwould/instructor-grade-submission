@@ -25,27 +25,11 @@ export const useGradeOptions = ({ sectionRegistrationId }) => {
                 .then(response => response.json())
                 .then(data => setGradeOptions(grades.map(grade => data.grades.find(fetchedGrade => fetchedGrade.value === grade)
                 )))
-                // .then(data => setGradeOptions(data.grades.sort((a, b) => {
-                //     // console.log("A-" > "A+")
-                //     if (a.value.split('')[0] < b.value.split('')[0]) {
-                //         return -1;
-                //     } else if (a.value.split('')[0] > b.value.split('')[0]) {
-                //         return 1;
-                //     } else {
-                //         if (a.value.split('').length > 1) {
-                //             if (a.value.split('')[1] === "+") {
-                //                 return -1
-                //             } else if (a.value && a.value.split('')[1] === "-") {
-                //                 return 1
-                //             } else return 0
-                //         } else return 0
-                //     }
-                // })))
                 .then(setFetching(false))
             }
         )()
 
-    }, [sectionRegistrationId])
+    }, [sectionRegistrationId, authenticatedEthosFetch, cardId])
 
     return { gradeOptions, fetching }
 }

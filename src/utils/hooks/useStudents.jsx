@@ -46,9 +46,15 @@ export function useStudents() {
                     student.grades.id = studentGrades.id
                     if (studentGrades.details?.grades?.some(grade => grade.type.title === "Midterm")) {
                         student.grades.midtermGrade = studentGrades.details?.grades.find(grade => grade.type.title === "Midterm")
+                        student.grades.midtermGrade.comments = studentGrades.ext?.midtermComments || null;
+                        student.grades.midtermGrade.absences = studentGrades.ext?.midAbs || null;
+                        student.grades.midtermGrade.status = studentGrades.ext?.midtermStatus || null;
                     } 
                     if (studentGrades.details?.grades?.some(grade => grade.type.title === "Final")) {
-                        student.grades.finalGrade = studentGrades.details?.grades.find(grade => grade.type.title === "Final")
+                        student.grades.finalGrade = studentGrades.details?.grades.find(grade => grade.type.title === "Final");
+                        student.grades.finalGrade.comments = studentGrades.ext?.finalComments || null;
+                        student.grades.finalGrade.absences = studentGrades.ext?.finAbs || null;
+                        student.grades.finalGrade.status = studentGrades.ext?.finalStatus || null;
                     }
                 }
                 if (studentGrades?.details?.lastAttendance?.date) {

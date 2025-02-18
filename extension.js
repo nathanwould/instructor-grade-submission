@@ -49,6 +49,7 @@ module.exports = {
                                 }
                                 section16 {
                                     sectionID: id
+                                    number
                                     course16 {
                                         titles {
                                             value

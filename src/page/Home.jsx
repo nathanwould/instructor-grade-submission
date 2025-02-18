@@ -4,6 +4,8 @@ import {
     Dropdown,
     DropdownItem,
     Typography,
+    Button,
+    Grid,
     Table,
     TableHead,
     TableBody,
@@ -14,7 +16,7 @@ import {
     Snackbar,
     StatusLabel
 } from '@ellucian/react-design-system/core';
-import { Edit as EditIcon } from '@ellucian/ds-icons/lib';
+import { Edit as EditIcon, Comments as CommentsIcon } from '@ellucian/ds-icons/lib';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -24,13 +26,17 @@ import {
 } from '@ellucian/experience-extension-extras';
 import {
     useData, 
-    usePageControl } from '@ellucian/experience-extension-utils';
+    usePageControl,
+    useCardInfo
+} from '@ellucian/experience-extension-utils';
 // import { useGraphQLFetch } from '../utils/hooks/useGraphQl';
 import { useStudents } from '../utils/hooks/useStudents';
 import { getSections } from '../utils/queries/getSections';
 import GradeDialog from './components/GradeDialog';
 import PropTypes from 'prop-types';
 import { useGradeTypes } from '../utils/queries/getGradeTypes';
+import CommentsDialog from './components/CommentsDialog';
+import { submitAllSaved } from '../utils/hooks/submitAllSaved';
 
 const useStyles = makeStyles(() => ({
     card: {
@@ -48,26 +54,38 @@ const SectionRegistrations = ({
  }) => {
     const classes = useStyles();
     const { setPageTitle, navigateToPage } = usePageControl("Sections");
-    setPageTitle(' ')
+    setPageTitle(' ');
 
+    const { serverConfigContext: { cardPrefix }, cardId } = useCardInfo();
+    const { authenticatedEthosFetch } = useData();
+
+    const [section, setSection] = useState();
     const [open, setOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState();
     const [showSnackbar, setShowSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState();
+    const [selectedComment, setSelectedComment] = useState();
+    const [openComment, setOpenComment] = useState(false);
 
-    const { data: sections, isFetching: isFetchingSections } = useDataQuery('instructor-section-registration-viewer')
+    const { data: sections, isFetching: isFetchingSections } = useDataQuery('instructor-section-registration-viewer');
     
     const { course, registrations, isFetching } = useStudents();
     const { gradeTypes } = useGradeTypes();
-    
-    // console.log(sectionRegistrationId)
 
-    // useEffect(() => {
-    //     setSchemeId(selectedStudent?.gradeScheme)
-    // }, [selectedStudent, setSchemeId])
+    useEffect(() => {
+        setSection(sections?.find(section => section.id === sectionId))
+    }, [sections, sectionId]);
 
     const handleChangeSection = (e) => {
         navigateToPage({ route: `sections/${e.target.value}` })
+    };
+
+    const handleSubmitAll = () => {
+        const allSaved = registrations?.filter(student => 
+            student.grades?.midtermGrade?.status === 'saved'
+            || student.grades?.finalGrade?.status === 'saved'
+        )
+        submitAllSaved({ authenticatedEthosFetch, cardId, cardPrefix, allSaved })
     }
 
     return (
@@ -92,7 +110,7 @@ const SectionRegistrations = ({
                                     <DropdownItem
                                         key={section.id}
                                         value={section.id}
-                                        label={`${section.course.subject.title} ${section.course.number} | ${daysOfWeek} ${startOn}-${endOn}`}
+                                        label={`${section.course.subject.title} ${section.course.courseNumber} ${section.number} | ${daysOfWeek} ${startOn}-${endOn}`}
                                     />
                             )})
                     }
@@ -104,12 +122,25 @@ const SectionRegistrations = ({
                         <Skeleton paragraph={{ width: '40%'}} />
                     </div>
                 </div>
-                : course ?
+                : section ?
                 <div>
-                    <Typography variant='h1'>{course ? course?.titles[0]?.value : "Not Found"}</Typography>
-                    <Typography variant='h3'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
-                    <Typography variant='p'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
-                    <Table layout={{ variant: 'card', breakpoint: 'sm' }}>
+                    
+                    <Typography variant='h1'>{section ? section?.course?.title : "Not Found"}</Typography>
+                    <Grid 
+                        container
+                        direction="row"
+                        justifyContent="space-between"
+                    >
+                        <Grid>
+                            <Typography variant='h3'>{section ? `${section?.course?.subject?.title || "Not"} ${section.course?.courseNumber || " found"} ${section.number !== "0" ? section.number : null}` : "Not Found"}</Typography>
+                            <Typography variant='p' sx={{ marginBottom: ".5rem"}}>{`${section.instructionalEvents[0].daysOfWeek} ${section.instructionalEvents[0].startOn}-${section.instructionalEvents[0].endOn}`}</Typography>
+                        </Grid>
+                        <Grid>
+                            <Button color="secondary" onClick={handleSubmitAll}>Submit All Saved</Button>
+                        </Grid>
+                    </Grid>
+
+                    <Table layout={{ variant: 'card', breakpoint: 'sm' }} stickyHeader={true}>
                         <TableHead>
                             <TableRow>
                                 <TableCell>BannerID</TableCell>
@@ -136,19 +167,55 @@ const SectionRegistrations = ({
                                             {student.grades.midtermGrade?.grade.value}
                                         </TableCell>
                                         <TableCell columnName="Midterm Comments" size="sm">
-                                            {student.grades.midtermGrade?.grade.comments}
+                                            {student.grades.midtermGrade?.comments ?
+                                                <IconButton
+                                                    color="secondary" 
+                                                    title="View Comments"
+                                                    onClick={() => {
+                                                        setSelectedStudent(student)
+                                                        setSelectedComment(student.grades.midtermGrade.comments)
+                                                        setOpenComment(true)
+                                                    }}
+                                                >
+                                                    <CommentsIcon />
+                                                </IconButton>
+                                                : null
+                                            }
                                         </TableCell>
                                         <TableCell columnName="Midterm Status">
-                                            <StatusLabel type="success" text="submitted" />
+                                            {student.grades.midtermGrade?.status === "saved" && 
+                                                <StatusLabel type="pending" text="saved" />
+                                            }
+                                            {student.grades.midtermGrade?.status === "submitted" && 
+                                                <StatusLabel type="success" text="submitted" />
+                                            }
                                         </TableCell>
                                         <TableCell columnName="Final Grade">
                                             {student.grades.finalGrade?.grade.value}
                                         </TableCell>
                                         <TableCell columnName="Final Comments" size="sm">
-                                            {student.grades.finalGrade?.grade.comments}
+                                            {student.grades.finalGrade?.comments ?
+                                                <IconButton
+                                                    color="secondary" 
+                                                    title="View Comments"
+                                                    onClick={() => {
+                                                        setSelectedStudent(student)
+                                                        setSelectedComment(student.grades.finalGrade.comments)
+                                                        setOpenComment(true)
+                                                    }}
+                                                >
+                                                    <CommentsIcon />
+                                                </IconButton>
+                                                : null
+                                            }
                                         </TableCell>
                                         <TableCell columnName="Final Status">
-                                            <StatusLabel type="pending" text="saved" />
+                                            {student.grades.finalGrade?.status === "saved" && 
+                                                <StatusLabel type="pending" text="saved" />
+                                            }
+                                            {student.grades.finalGrade?.status === "submitted" && 
+                                                <StatusLabel type="success" text="submitted" />
+                                            }
                                         </TableCell>
                                         <TableCell columnName="Edit">
                                             <IconButton 
@@ -178,6 +245,15 @@ const SectionRegistrations = ({
                         setSnackbarMessage={setSnackbarMessage}
                         sectionRegistrationId={sectionRegistrationId}
                         setSectionRegistrationId={setSectionRegistrationId}
+                    />
+                    <CommentsDialog 
+                        openComment={openComment}
+                        setOpenComment={setOpenComment}
+                        selectedComment={selectedComment}
+                        setSelectedComment={setSelectedComment}
+                        selectedStudent={selectedStudent}
+                        setSelectedStudent={setSelectedStudent}
+                        courseName={course?.titles[0].value}
                     />
                 </div>
                 :

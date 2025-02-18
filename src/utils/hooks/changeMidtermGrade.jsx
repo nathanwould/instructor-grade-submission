@@ -7,7 +7,8 @@ export async function changeMidtermGrade({
     cardPrefix, 
     sectionRegistrationId,
     gradeId,
-    grade 
+    grade, 
+    status
 }) {
 
     const resource = 'change-midterm-grade';
@@ -22,7 +23,7 @@ export async function changeMidtermGrade({
 
         const resourcePath = `${resource}?${urlSearchParams}`;
 
-        console.log(JSON.stringify({ sectionRegistrationId, gradeId, grade }))
+        // console.log(JSON.stringify({ sectionRegistrationId, gradeId, grade, status }))
 
         const response = await authenticatedEthosFetch(resourcePath, {
             method: 'PUT',
@@ -30,7 +31,7 @@ export async function changeMidtermGrade({
                 'Content-Type': 'application/json',
                 Accept: 'application/vnd.hedtech.integration.v1.0.2+json',
             },
-            body: JSON.stringify({ sectionRegistrationId, gradeId, grade })
+            body: JSON.stringify({ sectionRegistrationId, gradeId, grade, status })
         });
 
         const end = new Date();

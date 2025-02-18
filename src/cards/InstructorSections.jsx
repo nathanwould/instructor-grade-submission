@@ -106,7 +106,7 @@ const InstructorSections = () => {
                                             <ListItemText 
                                                 variant={'h3'} 
                                                 primary={isFetching ? <Skeleton paragraph={{ width: '10sku' }} /> : <strong>{section.course.title}</strong>}
-                                                secondary={isFetching ? <Skeleton paragraph={{ width: '6sku' }} /> : `${section.course.subject.title} ${section.course.number} | ${daysOfWeek} ${startOn}-${endOn}`}
+                                                secondary={isFetching ? <Skeleton paragraph={{ width: '6sku' }} /> : `${section.course.subject.title} ${section.course.courseNumber} | ${daysOfWeek} ${startOn}-${endOn}`}
                                             />
                                             <IconButton
                                                 className={classes.iconButton}

@@ -29,7 +29,7 @@ export async function getSections({ queryParameters }) {
         const results = await Promise.all(instructionalEventPromises)
         results.forEach((result, index) => {
             const fetchedSection = fetchedSections[index];
-            const { section16: { sectionID, course16: { number, subject6, titles } } } = fetchedSection;
+            const { section16: { sectionID, number, course16: { number: courseNumber, subject6, titles } } } = fetchedSection;
             const title = titles && titles.length > 0 ? titles[0].value : '';
             
             const instructionalEvents = result?.data?.instructionalEvents11?.edges;
@@ -37,8 +37,9 @@ export async function getSections({ queryParameters }) {
 
             const section = {
                 id: sectionID,
+                number,
                 course: {
-                    number,
+                    courseNumber,
                     title,
                     subject: subject6
                 },
