@@ -1,0 +1,1 @@
+export const parseComment = (comment) => comment.replace(/!Br!/g, "\n");

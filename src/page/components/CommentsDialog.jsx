@@ -33,6 +33,20 @@ const CommentsDialog = ({
     courseName
 }) => {
     const classes = useStyles();
+    
+    let comment;
+
+    if (selectedComment?.split("\n").length) {
+        const filteredComment = selectedComment.split("\n").filter(item => !!item)
+        comment = filteredComment.map((item, index) => (
+            <Typography key={index} variant="body2" paragraph={true}>
+                {item}
+            </Typography>
+        ))
+    } else {
+        comment = <Typography variant="body2" paragraph="true">{selectedComment}</Typography>
+    }
+
     return (
         <Dialog 
             open={openComment}
@@ -57,7 +71,9 @@ const CommentsDialog = ({
                 </Grid>
             </DialogTitle>
             <DialogContent>
-                {selectedComment}
+                <Typography variant="body2" paragraph="true">
+                    {comment}
+                </Typography>
             </DialogContent>
 
         </Dialog>

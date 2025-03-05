@@ -10,22 +10,23 @@ import {
     Avatar,
     Typography,
     FormControl,
+    FormHelperText,
     Dropdown,
     DropdownItem,
     TextField,
-    InputAdornment,
     DatePicker,
     Button,
     Skeleton,
     CircularProgress
 } from '@ellucian/react-design-system/core';
-import { useCardInfo, useData, useExtensionControl } from '@ellucian/experience-extension-utils';
+import { useCardInfo, useData } from '@ellucian/experience-extension-utils';
 import { useDataQuery } from '@ellucian/experience-extension-extras';
 import PropTypes from 'prop-types';
 import { submitStudentGrade } from '../../utils/hooks/submitStudentGrade';
 import { changeMidtermGrade } from '../../utils/hooks/changeMidtermGrade';
 // import { submitFinalGrade } from '../../utils/hooks/submitFinalGrade';
 import { useGradeOptions } from '../../utils/hooks/useGradeOptions';
+import { formatError } from '../../utils/helperFunctions/formatError';
 
 const useStyles = makeStyles(() => ({
     Dialog: {
@@ -63,7 +64,6 @@ const GradeDialog = ({
 }) => {
     const classes = useStyles();
 
-    const { setErrorMessage } = useExtensionControl();
     const { serverConfigContext: { cardPrefix }, cardId } = useCardInfo();
     const { authenticatedEthosFetch } = useData();
 
@@ -73,6 +73,7 @@ const GradeDialog = ({
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [formError, setFormError] = useState();
 
     const { gradeOptions, fetching } = useGradeOptions({ sectionRegistrationId });
     
@@ -84,7 +85,7 @@ const GradeDialog = ({
     const incompleteGradeOptions = gradeOptions?.filter(grade => grade.value !== "I" && grade.value !== "W");
     
     // console.log(selectedStudent)
-    console.log(grade)
+    // console.log(midtermGradeType, finalGradeType)
     
     const clearInputs = () => {
         setGrade(initialGrade)
@@ -103,7 +104,7 @@ const GradeDialog = ({
     }, [selectedStudent]);
 
     const handleChange = (e) => {
-        console.log(e.target.value)
+        // console.log(e.target.value)
         setGrade(prev => {
             if (e.target.name === 'gradeType') {
                 if (e.target.value === midtermGradeType.id) {
@@ -154,13 +155,13 @@ const GradeDialog = ({
 
     const handleSubmit = useCallback((e) => {
         e.preventDefault()
-        submitGrade({ selectedStudent, grade, status: "submitted" });
-    }, [grade, selectedStudent, submitGrade]);
+        submitGrade({ selectedStudent, grade, status: "submitted", midtermGradeType, finalGradeType, incompleteGrade });
+    }, [grade, selectedStudent, submitGrade, midtermGradeType, finalGradeType, incompleteGrade]);
 
     const handleSave = useCallback((e) => {
         e.preventDefault()
-        saveGrade({ selectedStudent, grade, status: "saved" });
-    }, [grade, selectedStudent, saveGrade]);
+        saveGrade({ selectedStudent, grade, status: "saved", midtermGradeType, finalGradeType, incompleteGrade });
+    }, [grade, selectedStudent, saveGrade, midtermGradeType, finalGradeType, incompleteGrade]);
 
     const handleSuccess = useCallback((message) => {
         setSuccess(true)
@@ -176,65 +177,87 @@ const GradeDialog = ({
         setSaveSuccess(true)
         console.log(message)
         refetchGrades()
-        setTimeout(setSaveSuccess, 1500, false)
+        setTimeout(setSaveSuccess, 3500, false)
     }, [refetchGrades]);
 
-    const handleFailure = useCallback((res) => {
+    const handleFailure = useCallback((error) => {
+        console.log(error)
+        setSaving(false)
         setSubmitting(false)
-        setErrorMessage(res.message)
-        console.log(res.status)
-        console.error(res.status)
-        showSnackbarMessage(res.status)
-    }, [setErrorMessage, showSnackbarMessage]);
+        setFormError(formatError(error.message))
+        // console.log(res.message)
+        console.error(error.status)
+    }, [setFormError]);
 
     const showSnackbarMessage = useCallback(message => {
         setShowSnackbar(true)
         setSnackbarMessage(message)
     }, [setShowSnackbar, setSnackbarMessage]);
 
-    const submitGrade = useCallback(async ({ selectedStudent, grade, status }) => {
-        console.log(status)
+    const submitGrade = useCallback(async ({ selectedStudent, grade, status, midtermGradeType, finalGradeType, incompleteGrade }) => {
+        // console.log(status)
         const sectionRegistrationId = selectedStudent?.sectionRegistration;
         if (!selectedStudent.grades.id) {
             setSubmitting(true)
-            const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade, status })
-            if (res.status === 'success') {
-                handleSuccess('Grade submitted!')
-            } else {
-                console.log(res)
-                handleFailure(res)
+            console.log(finalGradeType, midtermGradeType)
+            try {
+                const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade, status, selectedStudent, midtermGradeType, finalGradeType })
+                if (res.status === 'success') {
+                    handleSuccess('Grade submitted!')
+                } else {
+                    console.log(res)
+                    handleFailure(res)
+                }
+            } catch (error) {
+                handleFailure(error)
             }
         } else {
             setSubmitting(true)
             const gradeId = selectedStudent.grades.id
-            const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade, status })
-            if (res.status === 'success') {
-                handleSuccess('Grade submitted!')
-            } else {
-                handleFailure(res)
+            try {
+                const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade, status, selectedStudent, midtermGradeType, finalGradeType, incompleteGrade })
+                if (res.status === 'success') {
+                    handleSuccess('Grade submitted!')
+                } else {
+                    console.log(res)
+                    handleFailure(res)
+                }
+            } catch (error) {
+                console.log(error)
+                handleFailure(error)
             }
         }
     }, [authenticatedEthosFetch, cardId, cardPrefix, handleSuccess, handleFailure]);
 
-    const saveGrade = useCallback(async ({ selectedStudent, grade, status }) => {
+    const saveGrade = useCallback(async ({ selectedStudent, grade, status, midtermGradeType, finalGradeType, incompleteGrade }) => {
         const sectionRegistrationId = selectedStudent?.sectionRegistration;
         if (!selectedStudent.grades.id) {
             setSaving(true)
-            const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade, status })
-            if (res.status === 'success') {
-                handleSaveSuccess('Grade saved!')
-            } else {
-                console.log(res)
-                handleFailure(res)
+            try {
+                const res = await submitStudentGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, grade, status, selectedStudent, midtermGradeType, finalGradeType })
+                if (res.status && res.status === 'success') {
+                    handleSaveSuccess('Grade saved!')
+                } else {
+                    console.log(res)
+                    handleFailure(res)
+                }
+            } catch (error) {
+                console.log(error)
+                handleFailure(error)
             }
         } else {
             setSaving(true)
             const gradeId = selectedStudent.grades.id
-            const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade, status })
-            if (res.status === 'success') {
-                handleSaveSuccess('Grade saved!')
-            } else {
-                handleFailure(res)
+            try {
+                const res = await changeMidtermGrade({ authenticatedEthosFetch, cardId, cardPrefix, sectionRegistrationId, gradeId, grade, status, selectedStudent, midtermGradeType, finalGradeType, incompleteGrade })
+                if (res.status === 'success') {
+                    handleSaveSuccess('Grade saved!')
+                } else {
+                    handleFailure(res)
+                }
+            } catch (error) {
+                console.log(error)
+                handleFailure(error)
             }
         }
     }, [authenticatedEthosFetch, cardId, cardPrefix, handleSaveSuccess, handleFailure]);
@@ -246,6 +269,7 @@ const GradeDialog = ({
             className={classes.Dialog}
             maxWidth="md"
             fullWidth={true}
+            disableBackdropClick={true}
         >
             <DialogTitle className={classes.DialogTitle}>
                 <Grid 
@@ -323,7 +347,6 @@ const GradeDialog = ({
                                         placeholder="Select a date"
                                         value={grade?.lastAttendance}
                                         onDateChange={(date) => handleDateChange(date, 'lastAttendance')}
-                                        required
                                     />
                                 </div>
                                 <div className={classes.DialogItem}>
@@ -358,22 +381,23 @@ const GradeDialog = ({
                             placeholder="Comments"
                             value={grade?.comments ? grade.comments : ''}
                             onChange={handleChange}
-                            maxCharacters={4000}
+                            maxCharacters={{
+                                max: 4000,
+                                allowOverflow: false
+                            }}
                             rows="10"
                             fullWidth
                             multiline
                             required
-                            inputProps={{
-                                startAdornment: <InputAdornment position="start"> </InputAdornment>
-                            }}
                         />
+                        {formError && <FormHelperText error={formError}>{formError}</FormHelperText>}
                     </DialogContent>
                     <DialogActions>
                         <Button 
                             label="Save"
                             color="secondary"
                             onClick={handleSave}
-                            disabled={submitting}
+                            disabled={submitting || !grade.gradeType}
                         >
                             {saveSuccess ?
                                 "Success!"
@@ -387,7 +411,7 @@ const GradeDialog = ({
                             type="submit" 
                             label="Submit"
                             color="primary"
-                            disabled={saving}
+                            disabled={saving || !grade.gradeType}
                         >
                             {success ?
                                 "Success!"

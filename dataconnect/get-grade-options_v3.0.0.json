@@ -1,0 +1,39 @@
+{
+  "name": "get-grade-options",
+  "parameters": [
+    {
+      "name": "ethosAPIKey",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    },
+    {
+      "name": "sectionRegistrationId",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "apiDefinition": {
+    "authType": "userToken",
+    "httpVerb": "GET"
+  },
+  "pipeline": [
+    "Ethos Proxy Get"
+  ],
+  "segments": {
+    "Ethos Proxy Get": {
+      "class": "ethosProxyGet",
+      "config": {
+        "resource": "section-registrations",
+        "acceptVersions": [
+          "1"
+        ],
+        "altRepresentation": "section-registrations-grade-options",
+        "idFromContext": "$.sectionRegistrationId",
+        "cache": false,
+        "ignoreErrors": false,
+        "apiKey": "ethosAPIKey"
+      }
+    }
+  }
+}

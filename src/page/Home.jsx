@@ -6,17 +6,17 @@ import {
     Typography,
     Button,
     Grid,
-    Table,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableRow,
-    IconButton,
+    ConfirmationDialog,
+    FormControl,
+    FormLabel,
+    FormControlLabel,
+    FormHelperText,
+    RadioGroup,
+    Radio,
     Skeleton,
     Snackbar,
-    StatusLabel
+    CircularProgress
 } from '@ellucian/react-design-system/core';
-import { Edit as EditIcon, Comments as CommentsIcon } from '@ellucian/ds-icons/lib';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -37,6 +37,9 @@ import PropTypes from 'prop-types';
 import { useGradeTypes } from '../utils/queries/getGradeTypes';
 import CommentsDialog from './components/CommentsDialog';
 import { submitAllSaved } from '../utils/hooks/submitAllSaved';
+import { useSections } from '../utils/hooks/useSections';
+import SkeletonTable from './components/SkeletonTable';
+import StudentsTable from './components/StudentsTable';
 
 const useStyles = makeStyles(() => ({
     card: {
@@ -66,10 +69,19 @@ const SectionRegistrations = ({
     const [snackbarMessage, setSnackbarMessage] = useState();
     const [selectedComment, setSelectedComment] = useState();
     const [openComment, setOpenComment] = useState(false);
+    const [openConfirm, setOpenConfirm] = useState(false);
+    const [radioValue, setRadioValue] = useState();
+    const [submitting, setSubmitting] = useState(false);
+    const [submittingError, setSubmittingError] = useState();
 
-    const { data: sections, isFetching: isFetchingSections } = useDataQuery('instructor-section-registration-viewer');
-    
-    const { course, registrations, isFetching } = useStudents();
+    // const { data: sections, isFetching: isFetchingSections } = useDataQuery('instructor-section-registration-viewer');
+    const { sections, isLoading: isFetchingSections } = useSections();
+    const { refresh: refetchGrades/*, isRefreshing: isRefreshingGrades */} = useDataQuery('get-grades');
+
+    // console.log(isRefreshingGrades)
+
+    const { course, registrations, isLoading } = useStudents();
+    // const { refresh: refetchRegistrations } = useDataQuery('get-registered-students')
     const { gradeTypes } = useGradeTypes();
 
     useEffect(() => {
@@ -77,16 +89,42 @@ const SectionRegistrations = ({
     }, [sections, sectionId]);
 
     const handleChangeSection = (e) => {
+        console.log(e.target.value)
         navigateToPage({ route: `sections/${e.target.value}` })
+        window.location.reload()
+        // setReload(prev => !prev)
     };
 
-    const handleSubmitAll = () => {
+    const handleOpenEdit = ({ student }) => {
+        setSelectedStudent(student)
+        setSectionRegistrationId(student.sectionRegistration)
+        setOpen(true)
+    }
+
+    const handleOpenComment = ({ student }, comment) => {
+        setSelectedStudent(student)
+        setSelectedComment(comment)
+        setOpenComment(true)
+    }
+
+    const handleSubmitAll = async (e, { type }) => {
         const allSaved = registrations?.filter(student => 
             student.grades?.midtermGrade?.status === 'saved'
             || student.grades?.finalGrade?.status === 'saved'
         )
-        submitAllSaved({ authenticatedEthosFetch, cardId, cardPrefix, allSaved })
-    }
+        setSubmitting(true);
+        const res = await submitAllSaved({ authenticatedEthosFetch, cardId, cardPrefix, allSaved, type, setSubmitting, setSubmittingError });
+        console.log(res)
+        if (res && res[0]?.status === 200) {
+            setSubmitting(false);
+            setOpenConfirm(false);
+            refetchGrades();
+            
+        } else {
+            console.log(res)
+            setSubmitting(false);
+        }
+    };
 
     return (
         <div className={classes.card}>
@@ -100,7 +138,7 @@ const SectionRegistrations = ({
                 >
                     {isFetchingSections ?
                         <DropdownItem label={<Skeleton paragraph={{ width: '10sku' }} />} />
-                        :   sections?.length === 0 ? 
+                        : sections?.length === 0 ? 
                             <DropdownItem>
                                 <Typography>No sections found</Typography>
                             </DropdownItem>
@@ -110,19 +148,13 @@ const SectionRegistrations = ({
                                     <DropdownItem
                                         key={section.id}
                                         value={section.id}
-                                        label={`${section.course.subject.title} ${section.course.courseNumber} ${section.number} | ${daysOfWeek} ${startOn}-${endOn}`}
+                                        label={`${section.course.subject.title} ${section.course.courseNumber} ${section.number ? section.number : ''} | ${daysOfWeek} ${startOn}-${endOn}`}
                                     />
                             )})
                     }
                 </Dropdown>
             </div>
-            { isFetching ? 
-                <div>
-                    <div>
-                        <Skeleton paragraph={{ width: '40%'}} />
-                    </div>
-                </div>
-                : section ?
+            {section ?
                 <div>
                     
                     <Typography variant='h1'>{section ? section?.course?.title : "Not Found"}</Typography>
@@ -132,129 +164,13 @@ const SectionRegistrations = ({
                         justifyContent="space-between"
                     >
                         <Grid>
-                            <Typography variant='h3'>{section ? `${section?.course?.subject?.title || "Not"} ${section.course?.courseNumber || " found"} ${section.number !== "0" ? section.number : null}` : "Not Found"}</Typography>
+                            <Typography variant='h3'>{section ? `${section?.course?.subject?.title || "Not"} ${section.course?.courseNumber || " found"} ${section.number ? section.number : ''}` : "Not Found"}</Typography>
                             <Typography variant='p' sx={{ marginBottom: ".5rem"}}>{`${section.instructionalEvents[0].daysOfWeek} ${section.instructionalEvents[0].startOn}-${section.instructionalEvents[0].endOn}`}</Typography>
                         </Grid>
                         <Grid>
-                            <Button color="secondary" onClick={handleSubmitAll}>Submit All Saved</Button>
+                            <Button color="secondary" onClick={() => setOpenConfirm(true)}>Submit All Saved</Button>
                         </Grid>
                     </Grid>
-
-                    <Table layout={{ variant: 'card', breakpoint: 'sm' }} stickyHeader={true}>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>BannerID</TableCell>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Midterm Grade</TableCell>
-                                <TableCell size="sm">Midterm Comments</TableCell>
-                                <TableCell>Midterm Status</TableCell>
-                                <TableCell>Final Grade</TableCell>
-                                <TableCell size="sm">Final Comments</TableCell>
-                                <TableCell>Final Status</TableCell>
-                                <TableCell>Edit</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {registrations && registrations.map(student => (
-                                    <TableRow key={student.id}>
-                                        <TableCell columnName="BannerID">
-                                            {student.credentials?.bannerId}
-                                        </TableCell>
-                                        <TableCell columnName="Name">
-                                            {student.names[0].lastName}, {student.names[0].firstName}
-                                        </TableCell>
-                                        <TableCell columnName="Midterm Grade">
-                                            {student.grades.midtermGrade?.grade.value}
-                                        </TableCell>
-                                        <TableCell columnName="Midterm Comments" size="sm">
-                                            {student.grades.midtermGrade?.comments ?
-                                                <IconButton
-                                                    color="secondary" 
-                                                    title="View Comments"
-                                                    onClick={() => {
-                                                        setSelectedStudent(student)
-                                                        setSelectedComment(student.grades.midtermGrade.comments)
-                                                        setOpenComment(true)
-                                                    }}
-                                                >
-                                                    <CommentsIcon />
-                                                </IconButton>
-                                                : null
-                                            }
-                                        </TableCell>
-                                        <TableCell columnName="Midterm Status">
-                                            {student.grades.midtermGrade?.status === "saved" && 
-                                                <StatusLabel type="pending" text="saved" />
-                                            }
-                                            {student.grades.midtermGrade?.status === "submitted" && 
-                                                <StatusLabel type="success" text="submitted" />
-                                            }
-                                        </TableCell>
-                                        <TableCell columnName="Final Grade">
-                                            {student.grades.finalGrade?.grade.value}
-                                        </TableCell>
-                                        <TableCell columnName="Final Comments" size="sm">
-                                            {student.grades.finalGrade?.comments ?
-                                                <IconButton
-                                                    color="secondary" 
-                                                    title="View Comments"
-                                                    onClick={() => {
-                                                        setSelectedStudent(student)
-                                                        setSelectedComment(student.grades.finalGrade.comments)
-                                                        setOpenComment(true)
-                                                    }}
-                                                >
-                                                    <CommentsIcon />
-                                                </IconButton>
-                                                : null
-                                            }
-                                        </TableCell>
-                                        <TableCell columnName="Final Status">
-                                            {student.grades.finalGrade?.status === "saved" && 
-                                                <StatusLabel type="pending" text="saved" />
-                                            }
-                                            {student.grades.finalGrade?.status === "submitted" && 
-                                                <StatusLabel type="success" text="submitted" />
-                                            }
-                                        </TableCell>
-                                        <TableCell columnName="Edit">
-                                            <IconButton 
-                                                color="secondary" 
-                                                title="Edit"
-                                                onClick={() => {
-                                                    setSelectedStudent(student)
-                                                    setSectionRegistrationId(student.sectionRegistration)
-                                                    setOpen(true)
-                                                }}
-                                            >
-                                                <EditIcon />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                    <GradeDialog 
-                        open={open}
-                        setOpen={setOpen}
-                        selectedStudent={selectedStudent}
-                        setSelectedStudent={setSelectedStudent}
-                        courseName={course?.titles[0].value}
-                        gradeTypes={gradeTypes}
-                        setShowSnackbar={setShowSnackbar}
-                        setSnackbarMessage={setSnackbarMessage}
-                        sectionRegistrationId={sectionRegistrationId}
-                        setSectionRegistrationId={setSectionRegistrationId}
-                    />
-                    <CommentsDialog 
-                        openComment={openComment}
-                        setOpenComment={setOpenComment}
-                        selectedComment={selectedComment}
-                        setSelectedComment={setSelectedComment}
-                        selectedStudent={selectedStudent}
-                        setSelectedStudent={setSelectedStudent}
-                        courseName={course?.titles[0].value}
-                    />
                 </div>
                 :
                 <div>
@@ -262,6 +178,75 @@ const SectionRegistrations = ({
                     <Typography variant='h3'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
                 </div>
             }
+            { isLoading ? 
+                <SkeletonTable />
+                : registrations ?
+                    <StudentsTable 
+                        registrations={registrations}
+                        handleOpenEdit={handleOpenEdit}
+                        handleOpenComment={handleOpenComment}
+                    />
+                :
+                <div>
+                    <Typography variant='h1'>{course ? course?.titles[0]?.value : "Not Found"}</Typography>
+                    <Typography variant='h3'>{course ? `${course?.subject?.title || "Not"} ${course?.number || " found"}` : "Not Found"}</Typography>
+                </div>
+            }
+            <GradeDialog 
+                open={open}
+                setOpen={setOpen}
+                selectedStudent={selectedStudent}
+                setSelectedStudent={setSelectedStudent}
+                courseName={course?.titles[0].value}
+                gradeTypes={gradeTypes}
+                setShowSnackbar={setShowSnackbar}
+                setSnackbarMessage={setSnackbarMessage}
+                sectionRegistrationId={sectionRegistrationId}
+                setSectionRegistrationId={setSectionRegistrationId}
+            />
+            <CommentsDialog 
+                openComment={openComment}
+                setOpenComment={setOpenComment}
+                selectedComment={selectedComment}
+                setSelectedComment={setSelectedComment}
+                selectedStudent={selectedStudent}
+                setSelectedStudent={setSelectedStudent}
+                courseName={course?.titles[0].value}
+            />
+            <ConfirmationDialog 
+                open={openConfirm}
+                content={(
+                    <FormControl error={!!submittingError}>
+                        <FormLabel id="confirmation-dialog-confirmation-dialog">Which saved grades should be submitted?</FormLabel>
+                        <RadioGroup
+                            row
+                            aria-labelledby="confirmation-dialog-confirmation-dialog"
+                            value={radioValue}
+                            onChange={(e) => setRadioValue(e.target.value)}
+                        >
+                            <FormControlLabel value="midterm" control={<Radio />} label="Midterm" />
+                            <FormControlLabel value="final" control={<Radio />} label="Final" />
+                            <FormControlLabel value="all" control={<Radio />} label="All" />
+                        </RadioGroup>
+                        {submittingError && <FormHelperText>{submittingError.message}</FormHelperText>}
+                    </FormControl>
+                )}
+                title="Submit Grades"
+                primaryActionText={submitting ? <CircularProgress color="inherit"/> : "Submit"}
+                primaryActionOnClick={(e) => handleSubmitAll(e, { type: radioValue })}
+                primaryActionProps={{
+                    disabled: !radioValue && !submitting
+                }}
+                secondaryActionText="Cancel"
+                secondaryActionOnClick={() => {
+                    setOpenConfirm(false);
+                    setRadioValue();
+                    setSubmittingError();
+                }}
+                secondaryActionProps={{
+                    disabled: submitting
+                }}
+            />
             <Snackbar
                 open={showSnackbar}
                 message={snackbarMessage}
@@ -285,11 +270,11 @@ function SectionRegistrationsWithProvider() {
     
     const defaultParams = useMemo(() => ({ accept: "application/vnd.hedtech.integration.v1+json" }), [])
 
-    const options = /*useMemo(() => (*/[
+    const options = useMemo(() => ([
         {
             resource: 'get-registered-students',
             queryFunction: userTokenDataConnectQuery,
-            queryParameters: { accept: "application/vnd.hedtech.integration.v1.0.7+json" },
+            queryParameters: { accept: "application/vnd.hedtech.integration.v1.0.8+json" },
             queryKeys: { searchParameters: { sectionId } }
         },
         {
@@ -308,9 +293,10 @@ function SectionRegistrationsWithProvider() {
             resource: 'instructor-section-registration-viewer',
             queryFunction: getSections,
             queryParameters: { getEthosQuery },
-            queryKeys: 'get-sections'
+            queryKeys: 'get-sections',
+            cacheEnabled: false
         }
-]/*), [sectionId, schemeId, defaultParams, getEthosQuery, sectionRegistrationId]);*/
+]), [sectionId, defaultParams, getEthosQuery]);
 
     return (
         <MultiDataQueryProvider options={options}>

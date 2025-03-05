@@ -1,92 +1,104 @@
 import log from 'loglevel';
 const logger = log.getLogger('default');
 
+const resource = 'x-grade-comments-put';
+
 export async function submitAllSaved({
     authenticatedEthosFetch,
     cardId,
     cardPrefix,
     allSaved,
+    type, 
+    setSubmitting,
+    setSubmittingError
 }) {
-    const resource = 'change-midterm-grade';
+   
+    const urlSearchParams = new URLSearchParams({
+        cardId,
+        cardPrefix
+    }).toString();
 
-    let gradesToSubmit =  [];
+    const resourcePath = `${resource}?${urlSearchParams}`;
+
+    const gradesToSubmit = [];
+
+    let allMidtermGrades = [];
+    let allFinalGrades = [];
     
     allSaved.forEach(student => {
-        const { id, sectionRegistration, grades } = student
-        if (grades.midtermGrade.status === "saved") {
-            gradesToSubmit.push({
-                gradeId: id,
-                sectionRegistrationId: sectionRegistration,
-                status: "submitted"
+        // console.log(student)
+        const {
+            credentials: { bannerId }, 
+            grades: { 
+                xgrdId, 
+                midtermGrade, 
+                finalGrade 
+            }, 
+            section: { 
+                academicPeriod, 
+                crn
+            } 
+        } = student;
+
+        if (midtermGrade?.status === "saved") {
+            allMidtermGrades.push({
+                id: xgrdId,
+                xbannerId: bannerId,
+                xgrdcomCrn: crn,
+                xgrdcomTermCode: academicPeriod,
+                xgrdcomMidStat: "submitted"
             })
         }
-        if (grades.finalGrade.status === "saved") {
-            gradesToSubmit.push({
-                gradeId: id,
-                sectionRegistrationId: sectionRegistration,
-                status: "submitted"
+        if (finalGrade?.status === "saved") {
+            allFinalGrades.push({
+                id: xgrdId,
+                xbannerId: bannerId,
+                xgrdcomCrn: crn,
+                xgrdcomTermCode: academicPeriod,
+                xgrdcomFinStat: "submitted"
             })
         }
     })
 
-    console.log(gradesToSubmit)
+    if (type === "midterm") gradesToSubmit.push(...allMidtermGrades);
+    if (type === "final") gradesToSubmit.push(...allFinalGrades);
+    if (type === "all") gradesToSubmit.push(...allMidtermGrades, ...allFinalGrades);
+   
+    console.log(gradesToSubmit.length > 0)
+    
+    try {
+        console.log(gradesToSubmit)
+        setSubmitting(true)
 
-    // try {
-    //     const start = new Date();
+        if (gradesToSubmit.length > 0) {
+            let allPromises = [];
+            
+            for (const grade of gradesToSubmit) {
+                console.log(grade)
+                const promise = await authenticatedEthosFetch(`${resourcePath}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/vnd.hedtech.integration.v1+json'
+                    },
+                    body: JSON.stringify(grade)
+                });
+                allPromises.push(promise)
+            }
+            const results = await Promise.all(allPromises);
+            // console.log(results)
+            setSubmitting(false)
+            return results
+        }
+        else {
+            setSubmittingError({ message: "No grades to submit." })
+            return
+        }
+    } catch (error) {
+        setSubmitting(false)
+        logger.error('Unable to submit grades')
+        setSubmittingError(error)
+    }
 
-    //     const urlSearchParams = new URLSearchParams({
-    //         cardId,
-    //         cardPrefix
-    //     }).toString();
-
-    //     const resourcePath = `${resource}?${urlSearchParams}`;
-
-    //     const response = await authenticatedEthosFetch(resourcePath, {
-    //         method: 'POST',
-    //         headers: {
-    //             'Content-Type': 'application/vnd.hedtech.integration.student-unverified-grades-submissions.v1+json',
-    //             Accept: 'application/vnd.hedtech.integration.v1.0.16+json'
-    //         },
-    //         body: JSON.stringify({ sectionRegistrationId, grade, status: "saved" })
-    //     });
-
-    //     const end = new Date();
-    //     logger.debug(`post ${resource} time: ${end.getTime() - start.getTime()}`);
-
-    //     let result;
-    //     if (response) {
-    //         console.log(response)
-    //         switch (response.status) {
-    //             case 200:
-    //                 try {
-    //                     const data = await response.json();
-
-    //                     result = {
-    //                         data,
-    //                         status: 'success'
-    //                     };
-    //                 } catch (error) {
-    //                     result = {
-    //                         error: {
-    //                             message: 'unable to parse response',
-    //                             statusCode: 500
-    //                         }
-    //                     };
-    //                 }
-    //                 break;
-    //             default:
-    //                 result = {
-    //                     error: {
-    //                         message: 'server error',
-    //                         statusCode: response.status
-    //                     }
-    //                 };
-    //         }
-    //     }
-    //     return result;
-    // } catch (error) {
-    //     logger.error('unable to search for persons: ', error);
-    //     throw error;
-    // }
-
+    setSubmitting(false);
 }

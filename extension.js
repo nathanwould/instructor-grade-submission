@@ -34,6 +34,16 @@ module.exports = {
                         sort: { section16: { course16: { titles: { value: ASC } } } }
                         filter: {
                             instructor12: { id: { EQ: $personId } }
+                            section16: {
+                                academicPeriod16: {
+                                    ext: { 
+                                        OR: {
+                                            midtermGradingInd: { EQ: "Y" } 
+                                            finalGradingInd: { EQ: "Y" }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     ) {
                         totalCount
@@ -58,6 +68,14 @@ module.exports = {
                                             title
                                         }
                                         number
+                                    }
+                                    academicPeriod16 {
+                                        id
+                                        ext {
+                                            termCode
+                                            midtermGradingInd
+                                            finalGradingInd
+                                        }
                                     }
                                 }
                             }

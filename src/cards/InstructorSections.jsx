@@ -14,8 +14,12 @@ import {
 } from '@ellucian/react-design-system/core';
 import { spacing40 } from '@ellucian/react-design-system/core/styles/tokens';
 import React, { useMemo, Fragment } from "react";
-import { useDataQuery, DataQueryProvider } from '@ellucian/experience-extension-extras';
+import { 
+    // useDataQuery, 
+    DataQueryProvider 
+} from '@ellucian/experience-extension-extras';
 import { getSections } from '../utils/queries/getSections';
+import { useSections } from '../utils/hooks/useSections';
 
 const useStyles = makeStyles(() => ({
     card: {
@@ -63,72 +67,86 @@ const useStyles = makeStyles(() => ({
     }
 }));
 const InstructorSections = () => {
-    const { data: sections, isFetching } = useDataQuery('instructor-section-registration-viewer');
+    // const { data: sections, isLoading } = useDataQuery('instructor-section-registration-viewer');
     const classes = useStyles();
     const { navigateToPage } = useCardControl();
 
+    const { sections, isLoading } = useSections()
+    console.log(sections)
+    console.log(isLoading)
     const lastSectionIndex = !sections?.length ? 0 : sections?.length - 1;
 
-    return (
-        <div>
-            {
-                isFetching ?
-                    <List className={classes.list}>
-                        <ListItem className={classes.ListItem}>
-                            <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />} />
-                        </ListItem>
-                        <ListItem className={classes.ListItem}>
-                            <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />}/>
-                        </ListItem>
-                        <ListItem className={classes.ListItem}>
-                            <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />}/>
-                        </ListItem>
-                    </List> 
-                    : sections?.length === 0 ?
-                        <>
-                            <Illustration name={IMAGES.NEWS} />
-                            <Typography>No sections found.</Typography>
-                        </> 
-                        :
-                        <List
-                            className={classes.list}
-                        >
-                            {sections?.map((section, index) => {
-                                const { daysOfWeek, startOn, endOn } = section.instructionalEvents[0]
-                                return (
-                                <Fragment key={section.id}>
-                                    <ListItem
-                                        className={classes.listItem}
+    if (isLoading) {
+        console.log("isLoading")
+        return (
+            <List className={classes.list}>
+                <ListItem className={classes.ListItem}>
+                    <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />} />
+                </ListItem>
+                <ListItem className={classes.ListItem}>
+                    <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />}/>
+                </ListItem>
+                <ListItem className={classes.ListItem}>
+                    <ListItemText primary={<Skeleton paragraph={{ width: '10sku' }} />}/>
+                </ListItem>
+            </List> 
+        )
+    } else if (sections && !isLoading && sections?.length > 0) {
+            console.log("sections && !isLoading && sections?.length > 0")
+            return (
+                <div>
+                <List className={classes.list}>
+                    {sections?.map((section, index) => {
+                        const { daysOfWeek, startOn, endOn } = section.instructionalEvents[0]
+                        return (
+                            <Fragment key={section.id}>
+                            <ListItem
+                                className={classes.listItem}
+                                >
+                                <div
+                                    className={classes.listItemLine}
                                     >
-                                        <div
-                                            className={classes.listItemLine}
+                                    <ListItemText 
+                                        variant={'h3'} 
+                                        primary={isLoading ? <Skeleton paragraph={{ width: '10sku' }} /> : <strong>{section.course.title}</strong>}
+                                        secondary={isLoading ? <Skeleton paragraph={{ width: '6sku' }} /> : `${section.course.subject.title} ${section.course.courseNumber} | ${daysOfWeek} ${startOn}-${endOn}`}
+                                        />
+                                    <IconButton
+                                        className={classes.iconButton}
+                                        color="secondary"
+                                        onClick={() => navigateToPage({ route: `sections/${section.id}` })}
                                         >
-                                            <ListItemText 
-                                                variant={'h3'} 
-                                                primary={isFetching ? <Skeleton paragraph={{ width: '10sku' }} /> : <strong>{section.course.title}</strong>}
-                                                secondary={isFetching ? <Skeleton paragraph={{ width: '6sku' }} /> : `${section.course.subject.title} ${section.course.courseNumber} | ${daysOfWeek} ${startOn}-${endOn}`}
+                                        <ArrowRight
+                                            className={classes.icon}
                                             />
-                                            <IconButton
-                                                className={classes.iconButton}
-                                                color="secondary"
-                                                onClick={() => navigateToPage({ route: `sections/${section.id}` })}
-                                            >
-                                                <ArrowRight
-                                                    className={classes.icon}
-                                                />
-                                            </IconButton>
-                                        </div>
-                                    </ListItem>
-                                    {index !== lastSectionIndex && (
-                                        <Divider className={classes.divider} variant={'middle'} />
-                                    )}
-                                </Fragment>
-                            )})}
-                        </List>
-            }
-
-        </div>
-    )
+                                    </IconButton>
+                                </div>
+                            </ListItem>
+                            {index !== lastSectionIndex && (
+                                <Divider className={classes.divider} variant={'middle'} />
+                            )}
+                        </Fragment>
+                    )})}
+                </List>
+            </div>
+        )
+    } else if (sections && sections?.length === 0) {
+        console.log("sections && sections?.length === 0")
+        return (
+            <>
+                <Illustration name={IMAGES.NEWS} />
+                <Typography>No sections found.</Typography>
+            </> 
+        )
+    } else if (!sections && !isLoading) {
+        console.log("!sections && !isLoading")
+        return (
+            <>
+                <Illustration name={IMAGES.NEWS} />
+                <Typography>No sections found.</Typography>
+            </> 
+        )
+    }
 }
 
 function CardWithProvider() {

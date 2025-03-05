@@ -86,17 +86,17 @@ const InstructorSectionRegistrationViewerCard = () => {
                         <Fragment key={section.id}>
                             <ListItem className={classes.listItem}>
                                 <div className={classes.listItemLine}>
-                                    <Typography variant={'h3'}>{section.section16.course16.titles[0].value}</Typography>
+                                    <Typography variant={'h3'}>{section.course.title}</Typography>
                                     <IconButton 
                                         className={classes.iconButton} 
                                         color="secondary"
-                                        onClick={() => navigateToPage({ route: `sections/${section.section16.sectionID}`})}
+                                        onClick={() => navigateToPage({ route: `sections/${section.id}`})}
                                     >
                                         <ArrowRight className={classes.icon} />
                                     </IconButton>
                                 </div>
                                 <div className={classes.listItemLine}>
-                                    <Typography variant={'body2'}>{section.section16.course16.subject6.title} {section.section16.course16.number}</Typography>
+                                    <Typography variant={'body2'}>{section.course.subject.title} {section.course.courseNumber}</Typography>
                                 </div>
                             </ListItem>
                             {index !== lastSectionIndex && (

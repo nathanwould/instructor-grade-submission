@@ -22,7 +22,7 @@ export const useGradeTypes = () => {
                 try {
                     setData({ loading: true, gradeTypes: [] });
                     const fromEthos = await getEthosQuery({ queryId: 'get-grade-types' });
-                    console.log(fromEthos)
+                    // console.log(fromEthos)
                     const edges = fromEthos.data.sectionGradeTypes6.edges
                     const mappedData = edges.map((edge) => {
                         return {
